@@ -1,0 +1,63 @@
+package com.jfirer.jfirer.boot.forward.html;
+
+import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
+import com.jfirer.jnet.extend.http.client.HttpClient;
+import com.jfirer.jnet.extend.http.client.HttpReceiveResponse;
+import com.jfirer.jnet.extend.http.client.HttpSendRequest;
+import com.jfirer.jnet.extend.http.decode.HttpRequest;
+import com.jfirer.jnet.extend.http.decode.HttpResponse;
+
+import java.util.function.Function;
+
+public class ProxyHandler implements Function<HttpRequest, HttpResponse>
+{
+    private String url;
+    private String proxyPass;
+
+    public ProxyHandler(String url, String proxyPass)
+    {
+        this.url       = url;
+        this.proxyPass = proxyPass;
+    }
+
+    @Override
+    public HttpResponse apply(HttpRequest request)
+    {
+        if (request.getUrl().startsWith(url))
+        {
+            String          post            = request.getUrl().substring(url.length());
+            String          backendUrl      = proxyPass + post;
+            HttpSendRequest httpSendRequest = new HttpSendRequest();
+            httpSendRequest.setUrl(backendUrl).setMethod(request.getMethod()).setContentType(request.getContentType());
+            request.getHeaders().forEach((name, value) -> httpSendRequest.putHeader(name, value));
+            if (request.getBody() == null)
+            {
+                ;
+            }
+            else
+            {
+                IoBuffer copyed = HttpClient.ALLOCATOR.ioBuffer(request.getBody().remainRead());
+                copyed.put(request.getBody());
+                httpSendRequest.setBody(copyed);
+            }
+            httpSendRequest.setMethod(request.getMethod());
+            try (HttpReceiveResponse httpReceiveResponse = HttpClient.newCall(httpSendRequest))
+            {
+                IoBuffer     ioBuffer     = httpReceiveResponse.waitForAllBodyPart();
+                HttpResponse httpResponse = new HttpResponse();
+                httpResponse.setBodyBuffer(ioBuffer);
+                httpResponse.setContentType(httpReceiveResponse.getContentType());
+                httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.addHeader(name, value));
+                return httpResponse;
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+        else
+        {
+            return null;
+        }
+    }
+}
