@@ -4,6 +4,7 @@ import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
 import com.jfirer.jnet.extend.http.client.HttpClient;
 import com.jfirer.jnet.extend.http.client.HttpReceiveResponse;
 import com.jfirer.jnet.extend.http.client.HttpSendRequest;
+import com.jfirer.jnet.extend.http.client.PartOfBody;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 
@@ -43,11 +44,19 @@ public class ProxyHandler implements Function<HttpRequest, HttpResponse>
             httpSendRequest.setMethod(request.getMethod());
             try (HttpReceiveResponse httpReceiveResponse = HttpClient.newCall(httpSendRequest))
             {
-                IoBuffer     ioBuffer     = httpReceiveResponse.waitForAllBodyPart();
+                httpReceiveResponse.waitForReceiveFinish();
+                IoBuffer   buffer = HttpClient.ALLOCATOR.ioBuffer(httpReceiveResponse.getContentLength() > 0 ? httpReceiveResponse.getContentLength() : 1024);
+                PartOfBody partOfBody;
+                while ((partOfBody = httpReceiveResponse.pollChunk()) != null && !partOfBody.isEndOrTerminateOfBody())
+                {
+                    buffer.put(partOfBody.getFullOriginData());
+                    partOfBody.freeBuffer();
+                }
                 HttpResponse httpResponse = new HttpResponse();
-                httpResponse.setBodyBuffer(ioBuffer);
+                httpResponse.setAutoSetContentLength(false);
+                httpResponse.setBodyBuffer(buffer);
                 httpResponse.setContentType(httpReceiveResponse.getContentType());
-                httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.addHeader(name, value));
+                httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.getHeaders().put(name, value));
                 return httpResponse;
             }
             catch (Exception e)
