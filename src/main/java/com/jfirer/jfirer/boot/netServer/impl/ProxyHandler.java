@@ -1,5 +1,7 @@
-package com.jfirer.jfirer.boot.forward.html;
+package com.jfirer.jfirer.boot.netServer.impl;
 
+import com.jfirer.jfirer.boot.netServer.TransferHandler;
+import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
 import com.jfirer.jnet.extend.http.client.HttpClient;
 import com.jfirer.jnet.extend.http.client.HttpReceiveResponse;
@@ -8,9 +10,7 @@ import com.jfirer.jnet.extend.http.client.PartOfBody;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 
-import java.util.function.Function;
-
-public class ProxyHandler implements Function<HttpRequest, HttpResponse>
+public class ProxyHandler implements TransferHandler
 {
     private String url;
     private String proxyPass;
@@ -22,7 +22,7 @@ public class ProxyHandler implements Function<HttpRequest, HttpResponse>
     }
 
     @Override
-    public HttpResponse apply(HttpRequest request)
+    public Boolean apply(HttpRequest request, Pipeline pipeline)
     {
         if (request.getUrl().startsWith(url))
         {
@@ -40,6 +40,7 @@ public class ProxyHandler implements Function<HttpRequest, HttpResponse>
                 IoBuffer copyed = HttpClient.ALLOCATOR.ioBuffer(request.getBody().remainRead());
                 copyed.put(request.getBody());
                 httpSendRequest.setBody(copyed);
+                request.close();
             }
             httpSendRequest.setMethod(request.getMethod());
             try (HttpReceiveResponse httpReceiveResponse = HttpClient.newCall(httpSendRequest))
@@ -54,10 +55,11 @@ public class ProxyHandler implements Function<HttpRequest, HttpResponse>
                 }
                 HttpResponse httpResponse = new HttpResponse();
                 httpResponse.setAutoSetContentLength(false);
+                httpResponse.setAutoSetContentType(false);
                 httpResponse.setBodyBuffer(buffer);
-                httpResponse.setContentType(httpReceiveResponse.getContentType());
                 httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.getHeaders().put(name, value));
-                return httpResponse;
+                pipeline.fireWrite(httpResponse);
+                return true;
             }
             catch (Exception e)
             {
@@ -66,7 +68,7 @@ public class ProxyHandler implements Function<HttpRequest, HttpResponse>
         }
         else
         {
-            return null;
+            return false;
         }
     }
 }
