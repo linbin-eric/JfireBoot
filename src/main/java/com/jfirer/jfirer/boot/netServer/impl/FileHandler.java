@@ -71,7 +71,7 @@ public class FileHandler implements TransferHandler
                 {
                     String sub = location.substring("file:".length());
                     char   c   = sub.charAt(0);
-                    if (c == '/' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))//这个地址是绝对路径
+                    if (c == '/' || (c >= 'a' && c <= 'z' && sub.charAt(1) == ':') || (c >= 'A' && c <= 'Z' && sub.charAt(1) == ':'))//这个地址是绝对路径
                     {
                         try (InputStream inputStream = new FileInputStream(new File(sub, str)))
                         {

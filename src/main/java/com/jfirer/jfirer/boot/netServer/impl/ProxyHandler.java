@@ -29,7 +29,7 @@ public class ProxyHandler implements TransferHandler
             String          post            = request.getUrl().substring(url.length());
             String          backendUrl      = proxyPass + post;
             HttpSendRequest httpSendRequest = new HttpSendRequest();
-            httpSendRequest.setUrl(backendUrl).setMethod(request.getMethod()).setContentType(request.getContentType());
+            httpSendRequest.setUrl(backendUrl).setMethod(request.getMethod());
             request.getHeaders().forEach((name, value) -> httpSendRequest.putHeader(name, value));
             if (request.getBody() == null)
             {
@@ -42,7 +42,6 @@ public class ProxyHandler implements TransferHandler
                 httpSendRequest.setBody(copyed);
                 request.close();
             }
-            httpSendRequest.setMethod(request.getMethod());
             try (HttpReceiveResponse httpReceiveResponse = HttpClient.newCall(httpSendRequest))
             {
                 httpReceiveResponse.waitForReceiveFinish();

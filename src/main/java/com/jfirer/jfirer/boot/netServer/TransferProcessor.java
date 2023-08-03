@@ -7,6 +7,7 @@ import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.Arrays;
@@ -48,6 +49,7 @@ public class TransferProcessor implements ReadProcessor<HttpRequest>
     }
 
     @Data
+    @Builder
     public static class Location
     {
         private String url;
