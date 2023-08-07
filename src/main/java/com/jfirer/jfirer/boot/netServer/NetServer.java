@@ -24,7 +24,6 @@ public class NetServer
     public void start()
     {
         ChannelConfig channelConfig = new ChannelConfig();
-        channelConfig.setChannelThreadNum(Runtime.getRuntime().availableProcessors());
         channelConfig.setChannelTreadNamePrefix("netServer-channelGroup-");
         channelConfig.setWorkerGroup(new DefaultWorkerGroup(Runtime.getRuntime().availableProcessors(), "netServer-worker-"));
         channelConfig.setPort(port);
