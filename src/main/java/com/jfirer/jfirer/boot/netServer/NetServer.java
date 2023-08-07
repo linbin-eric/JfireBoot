@@ -8,9 +8,11 @@ import com.jfirer.jnet.extend.http.decode.HttpRequestDecoder;
 import com.jfirer.jnet.extend.http.decode.HttpResponseEncoder;
 import com.jfirer.jnet.server.AioServer;
 
+import java.io.IOException;
+import java.nio.channels.AsynchronousChannelGroup;
+
 public class NetServer
 {
-
     private int                          port;
     private Class<?>                     rootClass;
     private TransferProcessor.Location[] locations;
@@ -25,6 +27,14 @@ public class NetServer
     public void start()
     {
         ChannelConfig channelConfig = new ChannelConfig();
+        try
+        {
+            channelConfig.setChannelGroup(AsynchronousChannelGroup.withFixedThreadPool(Runtime.getRuntime().availableProcessors(), r -> new Thread(r, "netServer-channelGroup")));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
         channelConfig.setWorkerGroup(new DefaultWorkerGroup(Runtime.getRuntime().availableProcessors() * 4));
         channelConfig.setPort(port);
         AioServer aioServer = new AioServer(channelConfig, channelContext ->
