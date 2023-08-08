@@ -24,7 +24,7 @@ public class NetServer
     public void start()
     {
         ChannelConfig channelConfig = new ChannelConfig();
-        channelConfig.setChannelTreadNamePrefix("netServer-channelGroup-");
+        channelConfig.setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP);
         channelConfig.setWorkerGroup(new DefaultWorkerGroup(Runtime.getRuntime().availableProcessors(), "netServer-worker-"));
         channelConfig.setPort(port);
         AioServer aioServer = new AioServer(channelConfig, channelContext ->
