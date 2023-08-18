@@ -34,6 +34,9 @@ public class PathRequest
         this.beanDefinition = beanDefinition;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
+        if(path.contains("${")){
+
+        }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
         paramValueGenerators = new Function[paramNames.length];
