@@ -2,6 +2,7 @@ package com.jfirer.jfirer.boot.forward.path;
 
 import com.jfirer.baseutil.StringUtil;
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,14 +10,12 @@ import java.util.Map;
 
 public class RestfulMatch
 {
-    private final String         path;
-    private       AnalysisNode[] analysisNodes;
+    private AnalysisNode[] analysisNodes;
 
     public RestfulMatch(String path)
     {
         List<AnalysisNode> list = new ArrayList<>();
-        this.path = path;
-        int index;
+        int                index;
         while ((index = path.indexOf("${")) != -1)
         {
             if (index == 0)
@@ -37,7 +36,7 @@ public class RestfulMatch
                     analysisNode.setPrev(last);
                 }
                 list.add(analysisNode);
-                path.substring(end + 1);
+                path = path.substring(end + 1);
             }
             else
             {
@@ -52,7 +51,7 @@ public class RestfulMatch
                     node.setPrev(last);
                 }
                 list.add(node);
-                path.substring(index);
+                path = path.substring(index);
             }
         }
         if (StringUtil.isNotBlank(path))
@@ -67,7 +66,6 @@ public class RestfulMatch
                 node.setPrev(last);
             }
             list.add(node);
-            path.substring(index);
         }
         analysisNodes = list.toArray(AnalysisNode[]::new);
     }
@@ -91,7 +89,7 @@ public class RestfulMatch
                 start = index + analysisNode.getFragment().length();
             }
         }
-        start = 0;
+        int index = start = 0;
         for (int i = 0; i < analysisNodes.length; i++)
         {
             AnalysisNode analysisNode = analysisNodes[i];
@@ -101,24 +99,33 @@ public class RestfulMatch
             }
             else
             {
-                int index = path.indexOf(analysisNode.fragment, start);
+                index = path.indexOf(analysisNode.fragment, start);
                 if (start == index)
                 {
-                    start += analysisNode.fragment.length();
+                    ;
                 }
-                else{
+                else
+                {
                     params.put(analysisNode.getPrev().getFragment(), path.substring(start, index));
                 }
+                start = index + analysisNode.fragment.length();
             }
         }
+        if (start != path.length())
+        {
+            params.put(analysisNodes[analysisNodes.length - 1].getFragment(), path.substring(start));
+        }
+        return true;
     }
 
     @Data
     class AnalysisNode
     {
+        @ToString.Exclude
         AnalysisNode prev;
+        @ToString.Exclude
         AnalysisNode next;
-        String       fragment;
-        boolean      parameter;
+        String  fragment;
+        boolean parameter;
     }
 }

@@ -23,14 +23,17 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
     @Resource
     private ApplicationContext       applicationContext;
     private Map<String, PathRequest> requestMap;
+    private PathRequest[]            restfulRequests;
 
     @PostConstruct
     public void init()
     {
-        requestMap = applicationContext.getAllBeanRegisterInfos().stream().flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
-                                       .filter(method -> method.isAnnotationPresent(Path.class))//
-                                       .map(method -> new PathRequest(method, applicationContext.getBeanRegisterInfo(method.getDeclaringClass()).get()))//
-                                       .collect(Collectors.toMap(PathRequest::getPath, Function.identity()));
+        requestMap      = applicationContext.getAllBeanRegisterInfos().stream()//
+                                            .flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
+                                            .filter(method -> method.isAnnotationPresent(Path.class))//
+                                            .map(method -> new PathRequest(method, applicationContext.getBeanRegisterInfo(method.getDeclaringClass()).get()))//
+                                            .collect(Collectors.toMap(PathRequest::getPath, Function.identity()));
+        restfulRequests = requestMap.values().stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
     }
 
     @TraceId
@@ -39,18 +42,35 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
     {
         try (HttpRequestExtend requestExtend = HttpRequestExtend.from(data, next.pipeline()))
         {
-            PathRequest pathRequest = requestMap.get(requestExtend.getPath());
+            String      path        = requestExtend.getPath();
+            PathRequest pathRequest = requestMap.get(path);
             if (pathRequest == null)
             {
+                Map<String, Object> paramMap = requestExtend.getParamMap();
+                for (PathRequest restfulRequest : restfulRequests)
+                {
+                    if (restfulRequest.getRestfulMatch().match(path, paramMap))
+                    {
+                        Object value = pathRequest.invoke(requestExtend);
+                        if (value != null)
+                        {
+                            next.pipeline().fireWrite(value);
+                        }
+                        return;
+                    }
+                }
                 HttpResponse response = new HttpResponse();
                 response.setBody("notAvailable path:" + requestExtend.getPath());
                 next.pipeline().fireWrite(response);
                 return;
             }
-            Object value = pathRequest.invoke(requestExtend);
-            if (value != null)
+            else
             {
-                next.pipeline().fireWrite(value);
+                Object value = pathRequest.invoke(requestExtend);
+                if (value != null)
+                {
+                    next.pipeline().fireWrite(value);
+                }
             }
         }
         catch (Throwable e)

@@ -27,15 +27,17 @@ public class PathRequest
     private Function<HttpRequestExtend, Object>[] paramValueGenerators;
     private Method                                method;
     private BeanDefinition                        beanDefinition;
+    private RestfulMatch                          restfulMatch;
 
     public PathRequest(Method method, BeanDefinition beanDefinition)
     {
-        this.method = method;
+        this.method         = method;
         this.beanDefinition = beanDefinition;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
-        if(path.contains("${")){
-
+        if (path.contains("${"))
+        {
+            restfulMatch = new RestfulMatch(path);
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
@@ -45,23 +47,15 @@ public class PathRequest
             ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
             switch (primitive)
             {
-                case INT ->
-                        paramValueGenerators[i] = new IntegerParse(paramNames[i]);
-                case BOOL ->
-                        paramValueGenerators[i] = new BooleanParse(paramNames[i]);
-                case BYTE ->
-                        paramValueGenerators[i] = new ByteParse(paramNames[i]);
-                case SHORT ->
-                        paramValueGenerators[i] = new ShortParse(paramNames[i]);
-                case LONG ->
-                        paramValueGenerators[i] = new LongParse(paramNames[i]);
+                case INT -> paramValueGenerators[i] = new IntegerParse(paramNames[i]);
+                case BOOL -> paramValueGenerators[i] = new BooleanParse(paramNames[i]);
+                case BYTE -> paramValueGenerators[i] = new ByteParse(paramNames[i]);
+                case SHORT -> paramValueGenerators[i] = new ShortParse(paramNames[i]);
+                case LONG -> paramValueGenerators[i] = new LongParse(paramNames[i]);
                 case CHAR -> throw new IllegalArgumentException();
-                case FLOAT ->
-                        paramValueGenerators[i] = new FloatParse(paramNames[i]);
-                case DOUBLE ->
-                        paramValueGenerators[i] = new DoubleParse(paramNames[i]);
-                case STRING ->
-                        paramValueGenerators[i] = new StringParse(paramNames[i]);
+                case FLOAT -> paramValueGenerators[i] = new FloatParse(paramNames[i]);
+                case DOUBLE -> paramValueGenerators[i] = new DoubleParse(paramNames[i]);
+                case STRING -> paramValueGenerators[i] = new StringParse(paramNames[i]);
                 case UNKONW ->
                 {
                     if (parameterTypes[i] == HttpRequestExtend.class || parameterTypes[i] == HttpRequest.class)
@@ -341,27 +335,20 @@ public class PathRequest
                 Arrays.stream(type.getDeclaredFields()).forEach(field -> {
                     switch (ReflectUtil.ofPrimitive(field.getType()))
                     {
-                        case INT ->
-                                gen.add(new ObjectIntValue(field.getName()));
-                        case BOOL ->
-                                gen.add(new ObjectBooleanValue(field.getName()));
-                        case BYTE, SHORT, CHAR, UNKONW ->
-                                gen.add(new UnSupportValueType(field));
-                        case LONG ->
-                                gen.add(new ObjectLongValue(field.getName()));
-                        case FLOAT ->
-                                gen.add(new ObjectFloatValue(field.getName()));
-                        case DOUBLE ->
-                                gen.add(new ObjectDoubleValue(field.getName()));
-                        case STRING ->
-                                gen.add(new ObjectStringValue(field.getName()));
+                        case INT -> gen.add(new ObjectIntValue(field.getName()));
+                        case BOOL -> gen.add(new ObjectBooleanValue(field.getName()));
+                        case BYTE, SHORT, CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
+                        case LONG -> gen.add(new ObjectLongValue(field.getName()));
+                        case FLOAT -> gen.add(new ObjectFloatValue(field.getName()));
+                        case DOUBLE -> gen.add(new ObjectDoubleValue(field.getName()));
+                        case STRING -> gen.add(new ObjectStringValue(field.getName()));
                         default ->
                                 throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
                     }
                 });
                 type = type.getSuperclass();
             }
-            valueAccessors = list.toArray(ValueAccessor[]::new);
+            valueAccessors  = list.toArray(ValueAccessor[]::new);
             valueGenerators = gen.toArray(Function[]::new);
         }
 

@@ -15,6 +15,12 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.jfirer</groupId>
             <artifactId>dson</artifactId>
             <version>1.2-SNAPSHOT</version>
