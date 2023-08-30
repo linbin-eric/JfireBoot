@@ -51,7 +51,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
                 {
                     if (restfulRequest.getRestfulMatch().match(path, paramMap))
                     {
-                        Object value = pathRequest.invoke(requestExtend);
+                        Object value = restfulRequest.invoke(requestExtend);
                         if (value != null)
                         {
                             next.pipeline().fireWrite(value);
