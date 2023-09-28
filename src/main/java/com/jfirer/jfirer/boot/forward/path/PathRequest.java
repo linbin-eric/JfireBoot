@@ -11,13 +11,8 @@ import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import lombok.Data;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.*;
+import java.util.*;
 import java.util.function.Function;
 
 @Data
@@ -68,7 +63,7 @@ public class PathRequest
                     }
                     else
                     {
-                        paramValueGenerators[i] = new ObjectParse(parameterTypes[i]);
+                        paramValueGenerators[i] = new ObjectParse(method.getGenericParameterTypes()[i]);
                     }
                 }
             }
@@ -320,36 +315,53 @@ public class PathRequest
 
     class ObjectParse implements Function<HttpRequestExtend, Object>
     {
-        private Class                                   type;
+        private Type                                    type;
+        private Constructor                             constructor;
         private ValueAccessor[]                         valueAccessors;
         private Function<Map<String, Object>, Object>[] valueGenerators;
 
-        public ObjectParse(Class type)
+        public ObjectParse(Type type)
         {
             this.type = type;
-            List<ValueAccessor>                         list = new LinkedList<>();
-            List<Function<Map<String, Object>, Object>> gen  = new LinkedList<>();
-            while (type != Object.class)
+            if (type instanceof Class ckass &&( ckass.isInterface() == false && Collection.class.isAssignableFrom(ckass)==false))
             {
-                Arrays.stream(type.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
-                Arrays.stream(type.getDeclaredFields()).forEach(field -> {
-                    switch (ReflectUtil.ofPrimitive(field.getType()))
-                    {
-                        case INT -> gen.add(new ObjectIntValue(field.getName()));
-                        case BOOL -> gen.add(new ObjectBooleanValue(field.getName()));
-                        case BYTE, SHORT, CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
-                        case LONG -> gen.add(new ObjectLongValue(field.getName()));
-                        case FLOAT -> gen.add(new ObjectFloatValue(field.getName()));
-                        case DOUBLE -> gen.add(new ObjectDoubleValue(field.getName()));
-                        case STRING -> gen.add(new ObjectStringValue(field.getName()));
-                        default ->
-                                throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
+                try
+                {
+                    constructor = ckass.getDeclaredConstructor();
+                }
+                catch (NoSuchMethodException e)
+                {
+                    ReflectUtil.throwException(e);
+                }
+                List<ValueAccessor>                         list = new LinkedList<>();
+                List<Function<Map<String, Object>, Object>> gen  = new LinkedList<>();
+                while (ckass != Object.class)
+                {
+                    try{
+
+                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
+                    }catch (Throwable e){
+                        e.printStackTrace();
                     }
-                });
-                type = type.getSuperclass();
+                    Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
+                        switch (ReflectUtil.ofPrimitive(field.getType()))
+                        {
+                            case INT -> gen.add(new ObjectIntValue(field.getName()));
+                            case BOOL -> gen.add(new ObjectBooleanValue(field.getName()));
+                            case BYTE, SHORT, CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
+                            case LONG -> gen.add(new ObjectLongValue(field.getName()));
+                            case FLOAT -> gen.add(new ObjectFloatValue(field.getName()));
+                            case DOUBLE -> gen.add(new ObjectDoubleValue(field.getName()));
+                            case STRING -> gen.add(new ObjectStringValue(field.getName()));
+                            default ->
+                                    throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
+                        }
+                    });
+                    ckass = ckass.getSuperclass();
+                }
+                valueAccessors  = list.toArray(ValueAccessor[]::new);
+                valueGenerators = gen.toArray(Function[]::new);
             }
-            valueAccessors  = list.toArray(ValueAccessor[]::new);
-            valueGenerators = gen.toArray(Function[]::new);
         }
 
         @Override
@@ -363,7 +375,7 @@ public class PathRequest
             {
                 try
                 {
-                    Object instance = type.getDeclaredConstructor().newInstance();
+                    Object instance = constructor.newInstance();
                     for (int i = 0; i < valueAccessors.length; i++)
                     {
                         valueAccessors[i].setObject(instance, valueGenerators[i].apply(requestExtend.getParamMap()));

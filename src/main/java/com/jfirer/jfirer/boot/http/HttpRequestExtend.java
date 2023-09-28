@@ -185,8 +185,7 @@ public class HttpRequestExtend extends HttpRequest
         {
             path          = url.substring(0, index);
             queryParamMap = new HashMap<>();
-            Arrays.stream(url.substring(index + 1).split("&")).forEach(v ->
-            {
+            Arrays.stream(url.substring(index + 1).split("&")).forEach(v -> {
                 int paramValueIndex = v.indexOf("=");
                 if (paramValueIndex == -1)
                 {
@@ -202,20 +201,29 @@ public class HttpRequestExtend extends HttpRequest
 
     public void parseParamMap()
     {
-        if (getMethod().equalsIgnoreCase("post") && StringUtil.isNotBlank(getUtf8StrBody()))
+        if (getMethod().equalsIgnoreCase("post") && getContentType().toLowerCase().startsWith("application/json") && StringUtil.isNotBlank(getUtf8StrBody()))
         {
-            paramMap = (Map<String, Object>) Dson.fromString(getUtf8StrBody());
-            paramMap.putAll(queryParamMap);
+            Object o = Dson.fromString(getUtf8StrBody());
+            if (o instanceof Map)
+            {
+                paramMap = (Map<String, Object>) o;
+            }
+            else
+            {
+                paramMap = new HashMap<>();
+            }
         }
         else
         {
             paramMap = new HashMap<>();
-            paramMap.putAll(queryParamMap);
         }
-        if (paramMap == null)
+        paramMap.putAll(queryParamMap);
+        if (parts.isEmpty() == false)
         {
-            paramMap = new HashMap<>();
+            parts.stream()//
+                 .filter(v -> !v.isBinary())//
+                 .filter(v -> StringUtil.isNotBlank(v.getFieldName()))//
+                 .forEach(v -> paramMap.put(v.getFieldName(), v.getUtf8Value()));
         }
-        parts.stream().filter(v -> !v.isBinary()).filter(v -> StringUtil.isNotBlank(v.getFieldName())).forEach(v -> paramMap.put(v.getFieldName(), v.getUtf8Value()));
     }
 }
