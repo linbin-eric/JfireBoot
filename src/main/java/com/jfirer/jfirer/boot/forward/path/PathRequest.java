@@ -15,6 +15,12 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.Function;
 
+/**
+ * 现在的 Http 传参以 Json 格式居多。因此 PathRequest 默认在 post 模式下传参的格式是 json。
+ * 1. 如果接收方法的入参是一个非简单、非内置的类，则直接将请求通过 Json 逆序列化为方法入参对象。
+ * 2. 如果接收方法的入参是一个简单类，则将请求逆序列化后放入 paramMap。然后从 paramMap 中提取数据来初始化方法入参。
+ * 3. 如果接收方法的入参是 2 个及以上，则将请求逆序列化后放入 paramMap。对于入参中的复杂类，将请求体逆序列化为方法入参，对于入参中的简单类，则从 paramMap 中提取数据来初始化。
+ */
 @Data
 public class PathRequest
 {
@@ -23,6 +29,7 @@ public class PathRequest
     private Method                                method;
     private BeanDefinition                        beanDefinition;
     private RestfulMatch                          restfulMatch;
+    private boolean                               needDeserializateJsonToParamMap = false;
 
     public PathRequest(Method method, BeanDefinition beanDefinition)
     {
@@ -42,7 +49,7 @@ public class PathRequest
             ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
             switch (primitive)
             {
-                case INT -> paramValueGenerators[i] = new IntegerParse(paramNames[i]);
+                case INT -> paramValueGenerators[i] = new IntegerParse();
                 case BOOL -> paramValueGenerators[i] = new BooleanParse(paramNames[i]);
                 case BYTE -> paramValueGenerators[i] = new ByteParse(paramNames[i]);
                 case SHORT -> paramValueGenerators[i] = new ShortParse(paramNames[i]);
@@ -73,6 +80,25 @@ public class PathRequest
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
         return method.invoke(beanDefinition.getBean(), Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
+    }
+
+    class SimpleClassParse implements Function<HttpRequestExtend, Object>
+    {
+        private final String                   name;
+        private final Function<Object, Object> parse;
+
+        SimpleClassParse(String name, Function<Object, Object> parse)
+        {
+            this.name  = name;
+            this.parse = parse;
+        }
+
+        @Override
+        public Object apply(HttpRequestExtend httpRequestExtend)
+        {
+            Object val = httpRequestExtend.getParamMap().get(name);
+            return parse.apply(val);
+        }
     }
 
     class PipelineParse implements Function<HttpRequestExtend, Object>
@@ -323,7 +349,7 @@ public class PathRequest
         public ObjectParse(Type type)
         {
             this.type = type;
-            if (type instanceof Class ckass &&( ckass.isInterface() == false && Collection.class.isAssignableFrom(ckass)==false))
+            if (type instanceof Class ckass && (ckass.isInterface() == false && Collection.class.isAssignableFrom(ckass) == false))
             {
                 try
                 {
@@ -337,10 +363,12 @@ public class PathRequest
                 List<Function<Map<String, Object>, Object>> gen  = new LinkedList<>();
                 while (ckass != Object.class)
                 {
-                    try{
-
-                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
-                    }catch (Throwable e){
+                    try
+                    {
+                        Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
+                    }
+                    catch (Throwable e)
+                    {
                         e.printStackTrace();
                     }
                     Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {

@@ -1,7 +1,6 @@
 package com.jfirer.jfirer.boot.http;
 
 import com.jfirer.baseutil.StringUtil;
-import com.jfirer.dson.Dson;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
 import com.jfirer.jnet.common.util.HttpDecodeUtil;
@@ -201,22 +200,12 @@ public class HttpRequestExtend extends HttpRequest
 
     public void parseParamMap()
     {
-        if (getMethod().equalsIgnoreCase("post") && getContentType().toLowerCase().startsWith("application/json") && StringUtil.isNotBlank(getUtf8StrBody()))
+        paramMap = new HashMap<>();
+        if (contentType.equalsIgnoreCase("application/x-www-form-urlencoded"))
         {
-            Object o = Dson.fromString(getUtf8StrBody());
-            if (o instanceof Map)
-            {
-                paramMap = (Map<String, Object>) o;
-            }
-            else
-            {
-                paramMap = new HashMap<>();
-            }
+            //后续完成。如果是这种格式，则需要将数据放入 Map 中。
         }
-        else
-        {
-            paramMap = new HashMap<>();
-        }
+        //对于application/json这种格式，则在后续实际被解析的时候再进行解析。避免无畏的解析浪费性能。
         paramMap.putAll(queryParamMap);
         if (parts.isEmpty() == false)
         {
