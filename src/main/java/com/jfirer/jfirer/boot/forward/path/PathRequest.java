@@ -12,8 +12,9 @@ import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import lombok.Data;
 
 import java.lang.reflect.*;
-import java.nio.file.spi.FileTypeDetector;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -79,7 +80,12 @@ public class PathRequest
                     }
                     else
                     {
-                        paramValueGenerators[i] = new ObjectParse(method.getGenericParameterTypes()[i]);
+                        switch (requestType)
+                        {
+                            case JsonPost -> paramValueGenerators[i] = new JsonParse(method.getGenericParameterTypes()[i]);
+                            case UrlFormPost -> {}
+                            case MultiPost -> paramValueGenerators[i] = new FormObjectParse(parameterTypes[i]);
+                        }
                     }
                 }
             }
