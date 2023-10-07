@@ -19,9 +19,7 @@ import java.util.*;
 public class HttpRequestExtend extends HttpRequest
 {
     private             String              utf8StrBody;
-    private             Map<String, Object> paramMap;
-    @Getter(AccessLevel.NONE)
-    private             Map<String, String> queryParamMap;
+    private             Map<String, Object> paramMap    = new HashMap<>();
     private             String              path;
     @Setter
     private             Pipeline            pipeline;
@@ -177,42 +175,34 @@ public class HttpRequestExtend extends HttpRequest
         int index = url.indexOf("?");
         if (index == -1)
         {
-            path          = url;
-            queryParamMap = new HashMap<>();
+            path = url;
         }
         else
         {
             path          = url.substring(0, index);
-            queryParamMap = new HashMap<>();
             Arrays.stream(url.substring(index + 1).split("&")).forEach(v -> {
                 int paramValueIndex = v.indexOf("=");
                 if (paramValueIndex == -1)
                 {
-                    queryParamMap.put(v, "");
+                    paramMap.put(v, "");
                 }
                 else
                 {
-                    queryParamMap.put(v.substring(0, paramValueIndex), v.substring(paramValueIndex + 1));
+                    paramMap.put(v.substring(0, paramValueIndex), v.substring(paramValueIndex + 1));
                 }
             });
         }
     }
 
-    public void parseParamMap()
+    public void parseJsonBodyToParamMap()
     {
         paramMap = new HashMap<>();
-        if (contentType.equalsIgnoreCase("application/x-www-form-urlencoded"))
-        {
-            //后续完成。如果是这种格式，则需要将数据放入 Map 中。
-        }
-        //对于application/json这种格式，则在后续实际被解析的时候再进行解析。避免无畏的解析浪费性能。
-        paramMap.putAll(queryParamMap);
-        if (parts.isEmpty() == false)
-        {
-            parts.stream()//
-                 .filter(v -> !v.isBinary())//
-                 .filter(v -> StringUtil.isNotBlank(v.getFieldName()))//
-                 .forEach(v -> paramMap.put(v.getFieldName(), v.getUtf8Value()));
-        }
+
+    }
+    public void parseMutlipartToParamMap(){
+        parts.stream()//
+             .filter(v -> !v.isBinary())//
+             .filter(v -> StringUtil.isNotBlank(v.getFieldName()))//
+             .forEach(v -> paramMap.put(v.getFieldName(), v.getUtf8Value()));
     }
 }

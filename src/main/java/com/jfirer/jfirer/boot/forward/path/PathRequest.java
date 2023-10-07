@@ -43,7 +43,8 @@ public class PathRequest
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
-        paramValueGenerators = new Function[paramNames.length];
+        needDeserializateJsonToParamMap = parameterTypes.length > 1 && Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.ofPrimitive(type) != ReflectUtil.Primitive.UNKONW);
+        paramValueGenerators            = new Function[paramNames.length];
         for (int i = 0; i < paramNames.length; i++)
         {
             ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
@@ -79,6 +80,19 @@ public class PathRequest
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
+        String contentType = requestExtend.getContentType().toLowerCase();
+        if (contentType.startsWith("application/json"))
+        {
+            if(needDeserializateJsonToParamMap){
+
+            }
+        }
+        else if (contentType.startsWith("multipart/form-data"))
+        {
+        }
+        else if (contentType.startsWith("application/x-www-form-urlencoded"))
+        {
+        }
         return method.invoke(beanDefinition.getBean(), Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
     }
 
