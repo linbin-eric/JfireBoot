@@ -46,7 +46,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
             PathRequest pathRequest = requestMap.get(path);
             if (pathRequest == null)
             {
-                Map<String, Object> paramMap = requestExtend.getParamMap();
+                Map<String, Object> paramMap = requestExtend.getNotNullParamMap();
                 for (PathRequest restfulRequest : restfulRequests)
                 {
                     if (restfulRequest.getRestfulMatch().match(path, paramMap))

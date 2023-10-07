@@ -12,6 +12,7 @@ import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import lombok.Data;
 
 import java.lang.reflect.*;
+import java.nio.file.spi.FileTypeDetector;
 import java.util.*;
 import java.util.function.Function;
 
@@ -30,10 +31,17 @@ public class PathRequest
     private BeanDefinition                        beanDefinition;
     private RestfulMatch                          restfulMatch;
     private boolean                               needDeserializateJsonToParamMap = false;
+    private RequestType                           requestType;
+
+    enum RequestType
+    {
+        JsonPost, UrlFormPost, MultiPost
+    }
 
     public PathRequest(Method method, BeanDefinition beanDefinition)
     {
         this.method         = method;
+        requestType         = method.isAnnotationPresent(UrlFormPost.class) ? RequestType.UrlFormPost : method.isAnnotationPresent(MultiPartPost.class) ? RequestType.MultiPost : RequestType.JsonPost;
         this.beanDefinition = beanDefinition;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
@@ -50,15 +58,15 @@ public class PathRequest
             ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
             switch (primitive)
             {
-                case INT -> paramValueGenerators[i] = new IntegerParse();
-                case BOOL -> paramValueGenerators[i] = new BooleanParse(paramNames[i]);
-                case BYTE -> paramValueGenerators[i] = new ByteParse(paramNames[i]);
-                case SHORT -> paramValueGenerators[i] = new ShortParse(paramNames[i]);
-                case LONG -> paramValueGenerators[i] = new LongParse(paramNames[i]);
+                case INT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException());
+                case BOOL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException());
+                case BYTE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException());
+                case SHORT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException());
+                case LONG -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException());
                 case CHAR -> throw new IllegalArgumentException();
-                case FLOAT -> paramValueGenerators[i] = new FloatParse(paramNames[i]);
-                case DOUBLE -> paramValueGenerators[i] = new DoubleParse(paramNames[i]);
-                case STRING -> paramValueGenerators[i] = new StringParse(paramNames[i]);
+                case FLOAT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException());
+                case DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
+                case STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? value : new IllegalArgumentException());
                 case UNKONW ->
                 {
                     if (parameterTypes[i] == HttpRequestExtend.class || parameterTypes[i] == HttpRequest.class)
@@ -80,18 +88,24 @@ public class PathRequest
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
-        String contentType = requestExtend.getContentType().toLowerCase();
-        if (contentType.startsWith("application/json"))
+        switch (requestType)
         {
-            if(needDeserializateJsonToParamMap){
-
+            case JsonPost ->
+            {
+                requestExtend.parseUtf8Value();
+                if (needDeserializateJsonToParamMap)
+                {
+                    requestExtend.parseJsonBodyToParamMap();
+                }
             }
-        }
-        else if (contentType.startsWith("multipart/form-data"))
-        {
-        }
-        else if (contentType.startsWith("application/x-www-form-urlencoded"))
-        {
+            case UrlFormPost ->
+            {
+                throw new UnsupportedOperationException("还没有支持application/x-www-form-urlencoded形式");
+            }
+            case MultiPost ->
+            {
+                requestExtend.parseMultiPartToParamMap();
+            }
         }
         return method.invoke(beanDefinition.getBean(), Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
     }
@@ -133,306 +147,92 @@ public class PathRequest
         }
     }
 
-    class IntegerParse implements Function<HttpRequestExtend, Object>
+    class JsonParse implements Function<HttpRequestExtend, Object>
     {
-        private String name;
+        private Type type;
 
-        public IntegerParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Integer apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Integer.parseInt(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.intValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class BooleanParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public BooleanParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Boolean apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Boolean.parseBoolean(str);
-            }
-            else if (value instanceof Boolean b)
-            {
-                return b;
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ByteParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public ByteParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Byte apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Byte.parseByte(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.byteValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ShortParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public ShortParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Short apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Short.parseShort(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.shortValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class LongParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public LongParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Long apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Long.parseLong(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.longValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class FloatParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public FloatParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Float apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Float.parseFloat(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.floatValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class DoubleParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public DoubleParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Double apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String str)
-            {
-                return Double.parseDouble(str);
-            }
-            else if (value instanceof Number n)
-            {
-                return n.doubleValue();
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class StringParse implements Function<HttpRequestExtend, Object>
-    {
-        private String name;
-
-        public StringParse(String name)
-        {
-            this.name = name;
-        }
-
-        @Override
-        public Object apply(HttpRequestExtend requestExtend)
-        {
-            Object value = requestExtend.getParamMap().get(name);
-            if (value instanceof String)
-            {
-                return value;
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectParse implements Function<HttpRequestExtend, Object>
-    {
-        private Type                                    type;
-        private Constructor                             constructor;
-        private ValueAccessor[]                         valueAccessors;
-        private Function<Map<String, Object>, Object>[] valueGenerators;
-
-        public ObjectParse(Type type)
+        public JsonParse(Type type)
         {
             this.type = type;
-            if (type instanceof Class ckass && (ckass.isInterface() == false && Collection.class.isAssignableFrom(ckass) == false))
-            {
-                try
-                {
-                    constructor = ckass.getDeclaredConstructor();
-                }
-                catch (NoSuchMethodException e)
-                {
-                    ReflectUtil.throwException(e);
-                }
-                List<ValueAccessor>                         list = new LinkedList<>();
-                List<Function<Map<String, Object>, Object>> gen  = new LinkedList<>();
-                while (ckass != Object.class)
-                {
-                    try
-                    {
-                        Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
-                    }
-                    catch (Throwable e)
-                    {
-                        e.printStackTrace();
-                    }
-                    Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
-                        switch (ReflectUtil.ofPrimitive(field.getType()))
-                        {
-                            case INT -> gen.add(new ObjectIntValue(field.getName()));
-                            case BOOL -> gen.add(new ObjectBooleanValue(field.getName()));
-                            case BYTE, SHORT, CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
-                            case LONG -> gen.add(new ObjectLongValue(field.getName()));
-                            case FLOAT -> gen.add(new ObjectFloatValue(field.getName()));
-                            case DOUBLE -> gen.add(new ObjectDoubleValue(field.getName()));
-                            case STRING -> gen.add(new ObjectStringValue(field.getName()));
-                            default ->
-                                    throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
-                        }
-                    });
-                    ckass = ckass.getSuperclass();
-                }
-                valueAccessors  = list.toArray(ValueAccessor[]::new);
-                valueGenerators = gen.toArray(Function[]::new);
-            }
         }
 
         @Override
         public Object apply(HttpRequestExtend requestExtend)
         {
-            if (requestExtend.getMethod().equalsIgnoreCase("post") && requestExtend.getContentType().startsWith("application/json"))
+            return Dson.fromString(type, requestExtend.getUtf8StrBody());
+        }
+    }
+
+    class FormObjectParse implements Function<HttpRequestExtend, Object>
+    {
+        private Constructor                           constructor;
+        private ValueAccessor[]                       valueAccessors;
+        private Function<HttpRequestExtend, Object>[] valueGenerators;
+
+        public FormObjectParse(Class ckass)
+        {
+            try
             {
-                return Dson.fromString(type, requestExtend.getUtf8StrBody());
+                constructor = ckass.getDeclaredConstructor();
             }
-            else
+            catch (NoSuchMethodException e)
+            {
+                ReflectUtil.throwException(e);
+            }
+            List<ValueAccessor>                       list = new LinkedList<>();
+            List<Function<HttpRequestExtend, Object>> gen  = new LinkedList<>();
+            while (ckass != Object.class)
             {
                 try
                 {
-                    Object instance = constructor.newInstance();
-                    for (int i = 0; i < valueAccessors.length; i++)
-                    {
-                        valueAccessors[i].setObject(instance, valueGenerators[i].apply(requestExtend.getParamMap()));
-                    }
-                    return instance;
+                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(new ValueAccessor(f)));
                 }
                 catch (Throwable e)
                 {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
+                Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
+                    switch (ReflectUtil.ofPrimitive(field.getType()))
+                    {
+                        case INT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
+                        case BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
+                        case BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
+                        case SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
+                        case LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
+                        case FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
+                        case DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
+                        case STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? value : new IllegalArgumentException()));
+                        case CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
+                        default ->
+                                throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
+                    }
+                });
+                ckass = ckass.getSuperclass();
+            }
+            valueAccessors  = list.toArray(ValueAccessor[]::new);
+            valueGenerators = gen.toArray(Function[]::new);
+        }
+
+        @Override
+        public Object apply(HttpRequestExtend requestExtend)
+        {
+            try
+            {
+                Object instance = constructor.newInstance();
+                for (int i = 0; i < valueAccessors.length; i++)
+                {
+                    valueAccessors[i].setObject(instance, valueGenerators[i].apply(requestExtend));
+                }
+                return instance;
+            }
+            catch (Throwable e)
+            {
+                throw new RuntimeException(e);
             }
         }
     }
 
-    class UnSupportValueType implements Function<Map<String, Object>, Object>
+    class UnSupportValueType implements Function<HttpRequestExtend, Object>
     {
         private Field field;
 
@@ -442,173 +242,9 @@ public class PathRequest
         }
 
         @Override
-        public Object apply(Map<String, Object> map)
+        public Object apply(HttpRequestExtend extend)
         {
             throw new IllegalArgumentException("如果采用非Json方法体，不支持属性的类型。属性为:" + field.getDeclaringClass().getName() + "." + field.getName());
-        }
-    }
-
-    class ObjectIntValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectIntValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof Number num)
-            {
-                return num.intValue();
-            }
-            else if (value instanceof String str)
-            {
-                return Integer.valueOf(str);
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectLongValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectLongValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof Number num)
-            {
-                return num.longValue();
-            }
-            else if (value instanceof String str)
-            {
-                return Long.valueOf(str);
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectFloatValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectFloatValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof Number num)
-            {
-                return num.floatValue();
-            }
-            else if (value instanceof String str)
-            {
-                return Float.valueOf(str);
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectDoubleValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectDoubleValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof Number num)
-            {
-                return num.doubleValue();
-            }
-            else if (value instanceof String str)
-            {
-                return Double.valueOf(str);
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectBooleanValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectBooleanValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof Boolean bool)
-            {
-                return bool.booleanValue();
-            }
-            else if (value instanceof String str)
-            {
-                return Boolean.valueOf(str);
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    class ObjectStringValue implements Function<Map<String, Object>, Object>
-    {
-        private String fieldName;
-
-        public ObjectStringValue(String fieldName)
-        {
-            this.fieldName = fieldName;
-        }
-
-        @Override
-        public Object apply(Map<String, Object> map)
-        {
-            Object value = map.get(fieldName);
-            if (value instanceof String str)
-            {
-                return str;
-            }
-            else
-            {
-                throw new IllegalArgumentException();
-            }
         }
     }
 }
