@@ -1,6 +1,7 @@
 package com.jfirer.jfirer.boot.netServer.impl;
 
 import com.jfirer.baseutil.IoUtil;
+import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
 import com.jfirer.jfirer.boot.netServer.TransferHandler;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
@@ -20,25 +21,19 @@ public class FileHandler implements TransferHandler
     private Class<?>                               rootClass;
     private ConcurrentMap<String, ResourceContent> map             = new ConcurrentHashMap<>();
     private boolean                                cachable;
-    private Function<String, ResourceContent>      resourceHandler = str ->
-    {
+    private Function<String, ResourceContent>      resourceHandler = str -> {
         byte[] bytes;
         String contentType;
-        if (str.endsWith("css"))
+        int    i = str.lastIndexOf(".");
+        if (i == -1)
         {
-            contentType = "text/css";
-        }
-        else if (str.endsWith("js"))
-        {
-            contentType = "text/javascript";
-        }
-        else if (str.endsWith("ico") || str.endsWith("jpg") || str.endsWith("png"))
-        {
-            contentType = "image/png";
+            contentType = "text/html";
         }
         else
         {
-            contentType = "text/html";
+            String suffix = str.substring(i + 1);
+            String s      = ContentTypeDist.get(suffix);
+            contentType = s == null ? "text/html" : s;
         }
         if (location.startsWith("classpath:"))
         {
@@ -135,5 +130,7 @@ public class FileHandler implements TransferHandler
         }
     }
 
-    record ResourceContent(byte[] bytes, String contentType) {}
+    record ResourceContent(byte[] bytes, String contentType)
+    {
+    }
 }
