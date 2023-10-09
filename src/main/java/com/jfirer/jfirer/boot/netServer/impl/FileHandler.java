@@ -31,7 +31,7 @@ public class FileHandler implements TransferHandler
         }
         else
         {
-            String suffix = str.substring(i + 1);
+            String suffix = str.substring(i);
             String s      = ContentTypeDist.get(suffix);
             contentType = s == null ? "text/html" : s;
         }
