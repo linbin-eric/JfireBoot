@@ -121,11 +121,11 @@ public class HttpRequestExtend extends HttpRequest
         {
             if (part.isBinary())
             {
-                paramMap.put(part.getFieldName(), part.getUtf8Value());
+                paramMap.put(part.getFieldName(), part);
             }
             else
             {
-                paramMap.put(part.getFieldName(), part);
+                paramMap.put(part.getFieldName(), part.getUtf8Value());
             }
         }
     }
