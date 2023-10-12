@@ -99,7 +99,7 @@ public class PathRequest
             case JsonPost ->
             {
                 requestExtend.parseUtf8Value();
-                if (needDeserializateJsonToParamMap)
+                if (needDeserializateJsonToParamMap && requestExtend.getUtf8StrBody() != null)
                 {
                     requestExtend.parseJsonBodyToParamMap();
                 }

@@ -14,17 +14,15 @@ import java.util.Arrays;
 
 public class TransferProcessor implements ReadProcessor<HttpRequest>
 {
-    private Class<?>          rootClass;
     private TransferHandler[] handlers;
 
-    public TransferProcessor(Class<?> rootClass, Location[] locations)
+    public TransferProcessor( Location[] locations)
     {
-        this.rootClass = rootClass;
         handlers       = Arrays.stream(locations).map(location ->
         {
             if (StringUtil.isNotBlank(location.file))
             {
-                return new FileHandler(location.url, location.file, rootClass);
+                return new FileHandler(location.url, location.file);
             }
             else
             {

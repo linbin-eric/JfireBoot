@@ -1,5 +1,6 @@
 package com.jfirer.jfirer.boot.netServer.impl;
 
+import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.baseutil.IoUtil;
 import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
 import com.jfirer.jfirer.boot.netServer.TransferHandler;
@@ -7,8 +8,11 @@ import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 
-import java.io.*;
-import java.net.URISyntaxException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -18,7 +22,6 @@ public class FileHandler implements TransferHandler
     private String                                 url;
     private String                                 location;
     private int                                    postFixIndex;
-    private Class<?>                               rootClass;
     private ConcurrentMap<String, ResourceContent> map             = new ConcurrentHashMap<>();
     private boolean                                cachable;
     private Function<String, ResourceContent>      resourceHandler = str -> {
@@ -66,16 +69,17 @@ public class FileHandler implements TransferHandler
             }
             else
             {
-                try
+                File dir = CodeLocation.getFilePathOfMainMethodClass();
+                while (sub.startsWith("../"))
                 {
-                    File dir = new File(rootClass.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).getParentFile();
-                    while (sub.startsWith("../"))
-                    {
-                        dir = dir.getParentFile();
-                        sub = sub.substring(3);
-                    }
-                    dir = new File(dir, sub);
-                    try (InputStream inputStream = new FileInputStream(new File(dir, str)))
+                    dir = dir.getParentFile();
+                    sub = sub.substring(3);
+                }
+                dir = new File(dir, sub);
+                File resourceFile = new File(dir, str);
+                if (resourceFile.exists())
+                {
+                    try (InputStream inputStream = new FileInputStream(resourceFile))
                     {
                         bytes = IoUtil.readAllBytes(inputStream);
                         return new ResourceContent(bytes, contentType);
@@ -85,21 +89,20 @@ public class FileHandler implements TransferHandler
                         throw new RuntimeException(e);
                     }
                 }
-                catch (URISyntaxException e)
+                else
                 {
-                    throw new RuntimeException(e);
+                    return new ResourceContent(("not available path:" + str + ",not find in " + resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8), "text/html;charset=utf-8");
                 }
             }
         }
     };
 
-    public FileHandler(String url, String location, Class rootClass)
+    public FileHandler(String url, String location)
     {
-        this.url       = url;
-        this.location  = location;
-        this.rootClass = rootClass;
-        postFixIndex   = url.length();
-        cachable       = location.startsWith("classpath");
+        this.url      = url;
+        this.location = location;
+        postFixIndex  = url.length();
+        cachable      = location.startsWith("classpath");
     }
 
     @Override

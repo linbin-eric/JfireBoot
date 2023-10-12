@@ -178,7 +178,7 @@ public class ProxyHandler implements TransferHandler
                 if (each.literal)
                 {
                     index = url.indexOf(each.fragment, index);
-                    if (index == 0)
+                    if (index != -1)
                     {
                         index += each.fragment.length();
                     }
