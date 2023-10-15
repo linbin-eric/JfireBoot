@@ -4,6 +4,8 @@ import com.jfirer.dson.Dson;
 import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.util.ReflectUtil;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PostConstruct;
@@ -50,7 +52,9 @@ public class OpenApiForward
         }
     }
 
-    class ApiRequest
+    @Getter
+    @Setter
+    public class ApiRequest
     {
         String serviceId;
     }
