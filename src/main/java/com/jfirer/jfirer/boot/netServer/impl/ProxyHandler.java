@@ -20,7 +20,7 @@ public class ProxyHandler implements TransferHandler
     private static final int        PURE  = 1;
     private static final int        REST  = 2;
     private static final int        RANGE = 3;
-    private              String     url;
+    private              String     matchUrl;
     private              String     proxyPass;
     private              RestfulUrl restfulUrl;
     private              int        rangeBegin;
@@ -39,18 +39,18 @@ public class ProxyHandler implements TransferHandler
      * 例子：
      * url: /js[/*\/diagnose.js] 可以匹配到请求为 /js/H12232/diagnose.js的路径，并且请求转发的路径是/H12232/diagnose.js
      */
-    public ProxyHandler(String url, String proxyPass)
+    public ProxyHandler(String matchUrl, String proxyPass)
     {
-        this.url = url;
-        type     = url.contains("*") ? url.contains("[") ? RANGE : REST : PURE;
+        this.matchUrl = matchUrl;
+        type          = matchUrl.contains("*") ? matchUrl.contains("[") ? RANGE : REST : PURE;
         switch (type)
         {
             case RANGE ->
             {
-                restfulUrl = new RestfulUrl(url.replace("[", "").replace("]", ""));
-                rangeBegin = url.indexOf('[');
+                restfulUrl = new RestfulUrl(matchUrl.replace("[", "").replace("]", ""));
+                rangeBegin = matchUrl.indexOf('[');
             }
-            case REST -> restfulUrl = new RestfulUrl(url.replace("[", "").replace("]", ""));
+            case REST -> restfulUrl = new RestfulUrl(matchUrl.replace("[", "").replace("]", ""));
             case PURE -> {}
         }
         this.proxyPass = proxyPass;
@@ -59,14 +59,19 @@ public class ProxyHandler implements TransferHandler
     @Override
     public Boolean apply(HttpRequest request, Pipeline pipeline)
     {
-        String backendUrl = null;
+        String backendUrl           = null;
+        String requestUrlOfThisTime = request.getUrl();
+        if (requestUrlOfThisTime.contains("#/"))
+        {
+            requestUrlOfThisTime = requestUrlOfThisTime.substring(0, requestUrlOfThisTime.indexOf("#/"));
+        }
         switch (type)
         {
             case PURE ->
             {
-                if (request.getUrl().startsWith(url))
+                if (requestUrlOfThisTime.startsWith(matchUrl))
                 {
-                    backendUrl = proxyPass + request.getUrl().substring(url.length());
+                    backendUrl = proxyPass + requestUrlOfThisTime.substring(matchUrl.length());
                 }
                 else
                 {
@@ -75,7 +80,7 @@ public class ProxyHandler implements TransferHandler
             }
             case REST ->
             {
-                if (restfulUrl.match(request.getUrl()))
+                if (restfulUrl.match(requestUrlOfThisTime))
                 {
                     backendUrl = proxyPass + request.getUrl();
                 }
@@ -86,9 +91,9 @@ public class ProxyHandler implements TransferHandler
             }
             case RANGE ->
             {
-                if (restfulUrl.match(request.getUrl()))
+                if (restfulUrl.match(requestUrlOfThisTime))
                 {
-                    backendUrl = proxyPass + request.getUrl().substring(rangeBegin);
+                    backendUrl = proxyPass + requestUrlOfThisTime.substring(rangeBegin);
                 }
                 else
                 {

@@ -19,7 +19,7 @@ import java.util.function.Function;
 
 public class FileHandler implements TransferHandler
 {
-    private String                                 url;
+    private String                                 matchUrl;
     private String                                 location;
     private int                                    postFixIndex;
     private ConcurrentMap<String, ResourceContent> map             = new ConcurrentHashMap<>();
@@ -86,7 +86,7 @@ public class FileHandler implements TransferHandler
                     }
                     catch (IOException e)
                     {
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("读取文件地址:" + resourceFile.getAbsolutePath() + "出现异常", e);
                     }
                 }
                 else
@@ -97,18 +97,27 @@ public class FileHandler implements TransferHandler
         }
     };
 
-    public FileHandler(String url, String location)
+    public FileHandler(String matchUrl, String location)
     {
-        this.url      = url;
+        this.matchUrl = matchUrl;
         this.location = location;
-        postFixIndex  = url.length();
+        postFixIndex  = matchUrl.length();
         cachable      = location.startsWith("classpath");
     }
 
     @Override
     public Boolean apply(HttpRequest httpRequest, Pipeline pipeline)
     {
-        if (httpRequest.getUrl().startsWith(url))
+        String requestUrl = httpRequest.getUrl();
+        if (requestUrl.contains("#/"))
+        {
+            requestUrl = requestUrl.substring(0, requestUrl.indexOf("#/"));
+        }
+        if (requestUrl.equalsIgnoreCase("/"))
+        {
+            requestUrl = "/index.html";
+        }
+        if (requestUrl.startsWith(matchUrl))
         {
             String          postPath = httpRequest.getUrl().substring(postFixIndex);
             ResourceContent resourceContent;
