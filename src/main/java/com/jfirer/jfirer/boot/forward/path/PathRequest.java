@@ -78,6 +78,11 @@ public class PathRequest
                     {
                         paramValueGenerators[i] = new PipelineParse();
                     }
+                    else if (Enum.class.isAssignableFrom(parameterTypes[i]))
+                    {
+                        Class parameterType = parameterTypes[i];
+                        paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Enum.valueOf(parameterType, (String) value) : new IllegalArgumentException());
+                    }
                     else
                     {
                         switch (requestType)

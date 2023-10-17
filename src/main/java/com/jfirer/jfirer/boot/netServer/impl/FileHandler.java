@@ -119,7 +119,7 @@ public class FileHandler implements TransferHandler
         }
         if (requestUrl.startsWith(matchUrl))
         {
-            String          postPath = httpRequest.getUrl().substring(postFixIndex);
+            String          postPath = requestUrl.substring(postFixIndex);
             ResourceContent resourceContent;
             if (cachable)
             {
