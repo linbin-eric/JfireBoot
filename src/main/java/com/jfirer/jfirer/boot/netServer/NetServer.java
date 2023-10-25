@@ -45,8 +45,7 @@ public class NetServer
             pipeline.addReadProcessor(new TransferProcessor(locations));
             pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
         };
-        AioServer aioServer = useVirtualThread ? AioServer.newVirtualThreadServer(channelConfig, s::accept) ://
-                AioServer.newDefault(channelConfig, s::accept);
+        AioServer aioServer = AioServer.newAioServer(channelConfig, s::accept, useVirtualThread);
         aioServer.start();
     }
 }
