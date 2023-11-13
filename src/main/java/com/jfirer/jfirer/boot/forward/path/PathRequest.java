@@ -52,7 +52,7 @@ public class PathRequest
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
-        needDeserializateJsonToParamMap = parameterTypes.length > 1 && Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.ofPrimitive(type) != ReflectUtil.Primitive.UNKONW);
+        needDeserializateJsonToParamMap = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.ofPrimitive(type) != ReflectUtil.Primitive.UNKONW);
         paramValueGenerators            = new Function[paramNames.length];
         for (int i = 0; i < paramNames.length; i++)
         {
@@ -214,8 +214,7 @@ public class PathRequest
                         case DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
                         case STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? value : new IllegalArgumentException()));
                         case CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
-                        default ->
-                                throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
+                        default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
                     }
                 });
                 ckass = ckass.getSuperclass();
