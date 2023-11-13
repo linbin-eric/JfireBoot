@@ -59,15 +59,15 @@ public class PathRequest
             ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
             switch (primitive)
             {
-                case INT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException());
-                case BOOL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException());
-                case BYTE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException());
-                case SHORT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException());
-                case LONG -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException());
+                case INT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException());
+                case BOOL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException());
+                case BYTE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException());
+                case SHORT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException());
+                case LONG -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException());
                 case CHAR -> throw new IllegalArgumentException();
-                case FLOAT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException());
-                case DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
-                case STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? value : new IllegalArgumentException());
+                case FLOAT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException());
+                case DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
+                case STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? value : String.valueOf(value));
                 case UNKONW ->
                 {
                     if (parameterTypes[i] == HttpRequestExtend.class || parameterTypes[i] == HttpRequest.class)
