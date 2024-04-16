@@ -31,51 +31,50 @@ public class ServiceRequest
     public ServiceRequest(BeanDefinition beanDefinition, Method method, Function<HttpRequestExtend, String> dataExtracter)
     {
         this.beanDefinition = beanDefinition;
-        this.method = method;
-        serviceId = AnnotationContext.getAnnotation(ServiceId.class, method).value();
-        this.dataExtracter = dataExtracter;
+        this.method         = method;
+        serviceId           = AnnotationContext.getAnnotation(ServiceId.class, method).value();
+        this.dataExtracter  = dataExtracter;
         String[] paramNames = BytecodeUtil.parseMethodParamNames(method);
         paramValueParse = new BiFunction[paramNames.length];
         for (int i = 0; i < method.getParameterTypes().length; i++)
         {
             Class<?> parameterType = method.getParameterTypes()[i];
-            switch (ReflectUtil.ofPrimitive(parameterType))
+            switch (ReflectUtil.getClassId(parameterType))
             {
-                case INT ->
-                        paramValueParse[i] = new IntegerParse(paramNames[i]);
-                case BOOL ->
+                case ReflectUtil.CLASS_INT, ReflectUtil.PRIMITIVE_INT -> paramValueParse[i] = new IntegerParse(paramNames[i]);
+                case ReflectUtil.CLASS_BOOL, ReflectUtil.PRIMITIVE_BOOL ->
                 {
                     paramValueParse[i] = new BooleanParse(paramNames[i]);
                 }
-                case BYTE ->
+                case ReflectUtil.CLASS_BYTE, ReflectUtil.PRIMITIVE_BYTE ->
                 {
                     paramValueParse[i] = new ByteParse(paramNames[i]);
                 }
-                case SHORT ->
+                case ReflectUtil.CLASS_SHORT, ReflectUtil.PRIMITIVE_SHORT ->
                 {
                     paramValueParse[i] = new ShortParse(paramNames[i]);
                 }
-                case LONG ->
+                case ReflectUtil.CLASS_LONG, ReflectUtil.PRIMITIVE_LONG ->
                 {
                     paramValueParse[i] = new LongParse(paramNames[i]);
                 }
-                case CHAR ->
+                case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR ->
                 {
                     paramValueParse[i] = new CharParse(paramNames[i]);
                 }
-                case FLOAT ->
+                case ReflectUtil.CLASS_FLOAT, ReflectUtil.PRIMITIVE_FLOAT ->
                 {
                     paramValueParse[i] = new FloatParse(paramNames[i]);
                 }
-                case DOUBLE ->
+                case ReflectUtil.CLASS_DOUBLE, ReflectUtil.PRIMITIVE_DOUBLE ->
                 {
                     paramValueParse[i] = new DoubleParse(paramNames[i]);
                 }
-                case STRING ->
+                case ReflectUtil.CLASS_STRING ->
                 {
                     paramValueParse[i] = new StringParse(paramNames[i]);
                 }
-                case UNKONW ->
+                case ReflectUtil.CLASS_OBJECT ->
                 {
                     if (parameterType == Pipeline.class)
                     {
@@ -445,7 +444,7 @@ public class ServiceRequest
 
         public AttributeParse(Type type, String attribute)
         {
-            this.type = type;
+            this.type      = type;
             this.attribute = attribute;
         }
 

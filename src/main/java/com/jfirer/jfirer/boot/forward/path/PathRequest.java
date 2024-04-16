@@ -52,23 +52,23 @@ public class PathRequest
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
-        needDeserializateJsonToParamMap = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.ofPrimitive(type) != ReflectUtil.Primitive.UNKONW);
+        needDeserializateJsonToParamMap = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.getClassId(type) != ReflectUtil.CLASS_OBJECT);
         paramValueGenerators            = new Function[paramNames.length];
         for (int i = 0; i < paramNames.length; i++)
         {
-            ReflectUtil.Primitive primitive = ReflectUtil.ofPrimitive(parameterTypes[i]);
-            switch (primitive)
+            int classId = ReflectUtil.getClassId(parameterTypes[i]);
+            switch (classId)
             {
-                case INT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException());
-                case BOOL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException());
-                case BYTE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException());
-                case SHORT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException());
-                case LONG -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException());
-                case CHAR -> throw new IllegalArgumentException();
-                case FLOAT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException());
-                case DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
-                case STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? value : String.valueOf(value));
-                case UNKONW ->
+                case ReflectUtil.CLASS_INT, ReflectUtil.PRIMITIVE_INT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_BOOL, ReflectUtil.PRIMITIVE_BOOL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException());
+                case ReflectUtil.CLASS_BYTE, ReflectUtil.PRIMITIVE_BYTE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_SHORT, ReflectUtil.PRIMITIVE_SHORT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_LONG, ReflectUtil.PRIMITIVE_LONG -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR -> throw new IllegalArgumentException();
+                case ReflectUtil.CLASS_FLOAT, ReflectUtil.PRIMITIVE_FLOAT -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_DOUBLE, ReflectUtil.PRIMITIVE_DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
+                case ReflectUtil.CLASS_STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? value : String.valueOf(value));
+                case ReflectUtil.CLASS_OBJECT ->
                 {
                     if (parameterTypes[i] == HttpRequestExtend.class || parameterTypes[i] == HttpRequest.class)
                     {
@@ -203,18 +203,18 @@ public class PathRequest
                     e.printStackTrace();
                 }
                 Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
-                    switch (ReflectUtil.ofPrimitive(field.getType()))
+                    switch (ReflectUtil.getClassId(field.getType()))
                     {
-                        case INT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
-                        case BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
-                        case BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
-                        case SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
-                        case LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
-                        case FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
-                        case DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
-                        case STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? value : new IllegalArgumentException()));
-                        case CHAR, UNKONW -> gen.add(new UnSupportValueType(field));
-                        default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.ofPrimitive(field.getType()));
+                        case ReflectUtil.CLASS_INT, ReflectUtil.PRIMITIVE_INT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_BOOL, ReflectUtil.PRIMITIVE_BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_BYTE, ReflectUtil.PRIMITIVE_BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_SHORT, ReflectUtil.PRIMITIVE_SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_LONG, ReflectUtil.PRIMITIVE_LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_FLOAT, ReflectUtil.PRIMITIVE_FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_DOUBLE, ReflectUtil.PRIMITIVE_DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? value : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR, ReflectUtil.CLASS_OBJECT -> gen.add(new UnSupportValueType(field));
+                        default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.getClassId(field.getType()));
                     }
                 });
                 ckass = ckass.getSuperclass();
