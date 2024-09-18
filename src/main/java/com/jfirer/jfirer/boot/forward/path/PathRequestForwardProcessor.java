@@ -59,10 +59,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
                         return;
                     }
                 }
-                HttpResponse response = new HttpResponse();
-                response.setBody("notAvailable path:" + requestExtend.getPath());
-                next.pipeline().fireWrite(response);
-                return;
+                next.fireRead(requestExtend);
             }
             else
             {
