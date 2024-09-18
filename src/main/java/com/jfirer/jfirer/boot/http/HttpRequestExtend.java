@@ -193,6 +193,7 @@ public class HttpRequestExtend extends HttpRequest
             if (data != null)
             {
                 data.free();
+                data = null;
             }
         }
 

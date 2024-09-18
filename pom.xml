@@ -28,7 +28,7 @@
         <dependency>
             <groupId>com.jfirer</groupId>
             <artifactId>jnet</artifactId>
-            <version>1.0</version>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>com.jfirer</groupId>
