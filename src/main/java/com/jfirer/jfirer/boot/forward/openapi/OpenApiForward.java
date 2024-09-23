@@ -1,5 +1,7 @@
 package com.jfirer.jfirer.boot.forward.openapi;
 
+import com.jfirer.baseutil.PostConstruct;
+import com.jfirer.baseutil.Resource;
 import com.jfirer.dson.Dson;
 import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
@@ -8,8 +10,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;

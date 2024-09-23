@@ -1,5 +1,7 @@
 package com.jfirer.jfirer.boot.forward.path;
 
+import com.jfirer.baseutil.PostConstruct;
+import com.jfirer.baseutil.Resource;
 import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.common.TraceId;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
@@ -9,8 +11,6 @@ import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
