@@ -60,7 +60,8 @@ public class FileResourceHandler implements ResourceHandler
     @Override
     public boolean process(HttpRequest httpRequest, Pipeline pipeline)
     {
-        String requestUrl = httpRequest.getUrl();
+        String requestUrl, originUrl;
+        requestUrl = originUrl = httpRequest.getUrl();
         if (requestUrl.equalsIgnoreCase("/"))
         {
             requestUrl = "/index.html";
@@ -71,7 +72,6 @@ public class FileResourceHandler implements ResourceHandler
         }
         if (requestUrl.startsWith(matchUrl))
         {
-            byte[] bytes;
             String contentType;
             int    i = requestUrl.lastIndexOf(".");
             if (i == -1)
@@ -87,8 +87,12 @@ public class FileResourceHandler implements ResourceHandler
             {
                 try (InputStream inputStream = new FileInputStream(resourceFile))
                 {
-                    bytes = IoUtil.readAllBytes(inputStream);
-                    return new FileHandler.ResourceContent(bytes, contentType);
+                    byte[] bytes = IoUtil.readAllBytes(inputStream);
+                    httpRequest.close();
+                    HttpResponse response = new HttpResponse();
+                    response.setContentType(contentType);
+                    response.setBytes_body(bytes);
+                    pipeline.fireWrite(response);
                 }
                 catch (IOException e)
                 {
@@ -97,8 +101,14 @@ public class FileResourceHandler implements ResourceHandler
             }
             else
             {
-                return new FileHandler.ResourceContent(("not available path:" + str + ",not find in " + resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8), "text/html;charset=utf-8");
+                httpRequest.close();
+                HttpResponse response = new HttpResponse();
+                response.setContentType(contentType);
+                response.setBytes_body(STR.format("not available path:{},not find in :{}", originUrl, resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8));
+                response.setContentType("text/html;charset=utf-8");
+                pipeline.fireWrite(response);
             }
+            return true;
         }
         else
         {
