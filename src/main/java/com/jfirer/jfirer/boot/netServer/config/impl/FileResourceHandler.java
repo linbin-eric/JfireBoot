@@ -4,8 +4,6 @@ import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.baseutil.IoUtil;
 import com.jfirer.baseutil.STR;
 import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
-import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
-import com.jfirer.jfirer.boot.netServer.impl.FileHandler;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
@@ -16,21 +14,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-public class FileResourceHandler implements ResourceHandler
+public class FileResourceHandler extends AbstractIOResourceHandler
 {
-    private String  matchUrl;
-    private int     prefixLength;
-    private boolean absolutePath = false;
-    private File    dir;
+    private File dir;
 
-    public FileResourceHandler(String matchUrl, String path)
+    /**
+     * 通过matchUrl进行前缀匹配。
+     * 匹配成功的情况下，截取地址中非matchUrl的部分，拼接在path后，作为完整的资源地址进行读取
+     *
+     * @param matchUrl
+     * @param originPath
+     */
+    public FileResourceHandler(String matchUrl, String originPath)
     {
-        this.matchUrl = matchUrl;
-        prefixLength  = matchUrl.length();
-        String originPath = path;
-        path         = path.substring("file:".length());
-        absolutePath = isAbsolutePath(path);
-        if (absolutePath)
+        super(matchUrl, originPath);
+        if (isAbsolutePath(path))
         {
             dir = new File(path);
         }
@@ -50,6 +48,36 @@ public class FileResourceHandler implements ResourceHandler
         }
     }
 
+    @Override
+    protected void process(HttpRequest httpRequest, Pipeline pipeline, String requestUrl, String contentType)
+    {
+        File resourceFile = new File(dir, requestUrl);
+        if (resourceFile.exists())
+        {
+            try (InputStream inputStream = new FileInputStream(resourceFile))
+            {
+                byte[] bytes = IoUtil.readAllBytes(inputStream);
+                httpRequest.close();
+                HttpResponse response = new HttpResponse();
+                response.setContentType(contentType);
+                response.setBytes_body(bytes);
+                pipeline.fireWrite(response);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("读取文件地址:" + resourceFile.getAbsolutePath() + "出现异常", e);
+            }
+        }
+        else
+        {
+            httpRequest.close();
+            HttpResponse response = new HttpResponse();
+            response.setBytes_body(STR.format("not available path:{},not find in :{}", httpRequest.getUrl(), resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8));
+            response.setContentType("text/html;charset=utf-8");
+            pipeline.fireWrite(response);
+        }
+    }
+
     private static boolean isAbsolutePath(String path)
     {
         char c = path.charAt(0);
@@ -57,62 +85,5 @@ public class FileResourceHandler implements ResourceHandler
         return c == '/' || (c >= 'a' && c <= 'z' && path.charAt(1) == ':') || (c >= 'A' && c <= 'Z' && path.charAt(1) == ':');
     }
 
-    @Override
-    public boolean process(HttpRequest httpRequest, Pipeline pipeline)
-    {
-        String requestUrl, originUrl;
-        requestUrl = originUrl = httpRequest.getUrl();
-        if (requestUrl.equalsIgnoreCase("/"))
-        {
-            requestUrl = "/index.html";
-        }
-        else if (requestUrl.contains("#/"))
-        {
-            requestUrl = requestUrl.substring(0, requestUrl.indexOf("#/"));
-        }
-        if (requestUrl.startsWith(matchUrl))
-        {
-            String contentType;
-            int    i = requestUrl.lastIndexOf(".");
-            if (i == -1)
-            {
-                contentType = "text/html";
-            }
-            else
-            {
-                contentType = ContentTypeDist.getOrDefault(requestUrl.substring(i), "text/html");
-            }
-            File resourceFile = new File(dir, requestUrl.substring(prefixLength));
-            if (resourceFile.exists())
-            {
-                try (InputStream inputStream = new FileInputStream(resourceFile))
-                {
-                    byte[] bytes = IoUtil.readAllBytes(inputStream);
-                    httpRequest.close();
-                    HttpResponse response = new HttpResponse();
-                    response.setContentType(contentType);
-                    response.setBytes_body(bytes);
-                    pipeline.fireWrite(response);
-                }
-                catch (IOException e)
-                {
-                    throw new RuntimeException("读取文件地址:" + resourceFile.getAbsolutePath() + "出现异常", e);
-                }
-            }
-            else
-            {
-                httpRequest.close();
-                HttpResponse response = new HttpResponse();
-                response.setContentType(contentType);
-                response.setBytes_body(STR.format("not available path:{},not find in :{}", originUrl, resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8));
-                response.setContentType("text/html;charset=utf-8");
-                pipeline.fireWrite(response);
-            }
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
+
 }
