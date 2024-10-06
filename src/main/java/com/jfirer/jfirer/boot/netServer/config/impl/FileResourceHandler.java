@@ -3,7 +3,6 @@ package com.jfirer.jfirer.boot.netServer.config.impl;
 import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.baseutil.IoUtil;
 import com.jfirer.baseutil.STR;
-import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
@@ -14,20 +13,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-public class FileResourceHandler extends AbstractIOResourceHandler
+public final class FileResourceHandler extends AbstractIOResourceHandler
 {
     private File dir;
 
-    /**
-     * 通过matchUrl进行前缀匹配。
-     * 匹配成功的情况下，截取地址中非matchUrl的部分，拼接在path后，作为完整的资源地址进行读取
-     *
-     * @param matchUrl
-     * @param originPath
-     */
-    public FileResourceHandler(String matchUrl, String originPath)
+    public FileResourceHandler(String prefixMatch, String originPath)
     {
-        super(matchUrl, originPath);
+        super(prefixMatch, originPath);
         if (isAbsolutePath(path))
         {
             dir = new File(path);
@@ -84,6 +76,4 @@ public class FileResourceHandler extends AbstractIOResourceHandler
         //这个地址是绝对路径
         return c == '/' || (c >= 'a' && c <= 'z' && path.charAt(1) == ':') || (c >= 'A' && c <= 'Z' && path.charAt(1) == ':');
     }
-
-
 }

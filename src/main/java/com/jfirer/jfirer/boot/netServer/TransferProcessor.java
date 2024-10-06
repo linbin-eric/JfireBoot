@@ -1,6 +1,8 @@
 package com.jfirer.jfirer.boot.netServer;
 
 import com.jfirer.baseutil.StringUtil;
+import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
+import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
 import com.jfirer.jfirer.boot.netServer.impl.FileHandler;
 import com.jfirer.jfirer.boot.netServer.impl.ProxyHandler;
 import com.jfirer.jnet.common.api.ReadProcessor;
@@ -14,29 +16,19 @@ import java.util.Arrays;
 
 public class TransferProcessor implements ReadProcessor<HttpRequest>
 {
-    private TransferHandler[] handlers;
+    private ResourceHandler[] handlers;
 
-    public TransferProcessor( Location[] locations)
+    public TransferProcessor(ResourceConfig[] configs)
     {
-        handlers       = Arrays.stream(locations).map(location ->
-        {
-            if (StringUtil.isNotBlank(location.file))
-            {
-                return new FileHandler(location.url, location.file);
-            }
-            else
-            {
-                return new ProxyHandler(location.url, location.proxy);
-            }
-        }).toArray(TransferHandler[]::new);
+        handlers = Arrays.stream(configs).map(ResourceConfig::parse).toArray(ResourceHandler[]::new);
     }
 
     @Override
     public void read(HttpRequest request, ReadProcessorNode next)
     {
-        for (TransferHandler handler : handlers)
+        for (ResourceHandler handler : handlers)
         {
-            if (handler.apply(request, next.pipeline()))
+            if (handler.process(request, next.pipeline()))
             {
                 return;
             }
@@ -44,14 +36,5 @@ public class TransferProcessor implements ReadProcessor<HttpRequest>
         HttpResponse response = new HttpResponse();
         response.setBody("not found address:" + request.getUrl());
         next.pipeline().fireWrite(response);
-    }
-
-    @Data
-    @Builder
-    public static class Location
-    {
-        private String url;
-        private String file;
-        private String proxy;
     }
 }

@@ -9,48 +9,47 @@ import com.jfirer.jnet.extend.http.decode.HttpResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class ClassResourceHandler extends AbstractIOResourceHandler
+public final class ClassResourceHandler extends AbstractIOResourceHandler
 {
-    /**
-     * 通过matchUrl进行前缀匹配。
-     * 匹配成功的情况下，截取地址中非matchUrl的部分，拼接在path后，作为完整的资源地址进行读取
-     *
-     * @param matchUrl
-     * @param originPath
-     */
+    record Tuper(String contentType, byte[] bytes)
+    {
+    }
+
     public ClassResourceHandler(String matchUrl, String originPath)
     {
         super(matchUrl, originPath);
     }
 
+    private ConcurrentHashMap<String, Tuper> map = new ConcurrentHashMap<>();
+
     @Override
     protected void process(HttpRequest httpRequest, Pipeline pipeline, String requestUrl, String contentType)
     {
         String realClassResourcePath = path + requestUrl;
-        try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(realClassResourcePath))
-        {
-            if (resourceAsStream != null)
+        Tuper tuper = map.computeIfAbsent(realClassResourcePath, url -> {
+            try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(realClassResourcePath))
             {
-                byte[] bytes = IoUtil.readAllBytes(resourceAsStream);
-                httpRequest.close();
-                HttpResponse response = new HttpResponse();
-                response.setContentType(contentType);
-                response.setBytes_body(bytes);
-                pipeline.fireWrite(response);
+                if (resourceAsStream != null)
+                {
+                    byte[] bytes = IoUtil.readAllBytes(resourceAsStream);
+                    return new Tuper(contentType, bytes);
+                }
+                else
+                {
+                    return new Tuper("text/html;charset=utf-8", STR.format("not available path:{},not find in :{}", httpRequest.getUrl(), realClassResourcePath).getBytes(StandardCharsets.UTF_8));
+                }
             }
-            else
+            catch (IOException e)
             {
-                httpRequest.close();
-                HttpResponse response = new HttpResponse();
-                response.setBytes_body(STR.format("not available path:{},not find in :{}", httpRequest.getUrl(), realClassResourcePath).getBytes(StandardCharsets.UTF_8));
-                response.setContentType("text/html;charset=utf-8");
-                pipeline.fireWrite(response);
+                throw new RuntimeException(e);
             }
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
+        });
+        httpRequest.close();
+        HttpResponse response = new HttpResponse();
+        response.setContentType(tuper.contentType);
+        response.setBytes_body(tuper.bytes);
+        pipeline.fireWrite(response);
     }
 }

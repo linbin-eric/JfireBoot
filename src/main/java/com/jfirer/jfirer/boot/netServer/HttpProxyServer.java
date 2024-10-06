@@ -2,6 +2,7 @@ package com.jfirer.jfirer.boot.netServer;
 
 import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.jfirer.boot.http.OptionsProcessor;
+import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
 import com.jfirer.jnet.common.api.ChannelContext;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.common.internal.DefaultWorkerGroup;
@@ -14,13 +15,13 @@ import java.util.function.Consumer;
 
 public class HttpProxyServer
 {
-    private int                          port;
-    private TransferProcessor.Location[] locations;
+    private int              port;
+    private ResourceConfig[] configs;
 
-    public HttpProxyServer(int port, TransferProcessor.Location[] locations)
+    public HttpProxyServer(int port, ResourceConfig[] configs)
     {
-        this.port      = port;
-        this.locations = locations;
+        this.port    = port;
+        this.configs = configs;
     }
 
     public void start()
@@ -37,7 +38,7 @@ public class HttpProxyServer
             Pipeline pipeline = channelContext.pipeline();
             pipeline.addReadProcessor(new HttpRequestDecoder(channelConfig.getAllocator()));
             pipeline.addReadProcessor(new OptionsProcessor());
-            pipeline.addReadProcessor(new TransferProcessor(locations));
+            pipeline.addReadProcessor(new TransferProcessor(configs));
             pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
         };
         AioServer aioServer = AioServer.newAioServer(channelConfig, s::accept);

@@ -5,24 +5,31 @@ import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 
-public abstract class AbstractIOResourceHandler implements ResourceHandler
+public sealed abstract class AbstractIOResourceHandler implements ResourceHandler permits FileResourceHandler, ClassResourceHandler
 {
-    protected String matchUrl;
-    protected int    matchUrlLength;
+    protected String prefixMatch;
+    protected int    len;
     protected String path;
 
     /**
      * 通过matchUrl进行前缀匹配。
-     * 匹配成功的情况下，截取地址中非matchUrl的部分，拼接在path后，作为完整的资源地址进行读取
+     * 匹配成功的情况下，截取地址中非prefixMatch的部分，拼接在path后，作为完整的资源地址进行读取
      *
-     * @param matchUrl
+     * @param prefixMatch
      * @param path
      */
-    public AbstractIOResourceHandler(String matchUrl, String path)
+    public AbstractIOResourceHandler(String prefixMatch, String path)
     {
-        this.matchUrl  = matchUrl;
-        matchUrlLength = matchUrl.length();
-        this.path      = path.substring("file:".length());
+        this.prefixMatch = prefixMatch;
+        len              = prefixMatch.length();
+        if (path.startsWith("file:"))
+        {
+            this.path = path.substring("file:".length());
+        }
+        else
+        {
+            this.path = path.substring("classpath:".length());
+        }
     }
 
     @Override
@@ -37,7 +44,7 @@ public abstract class AbstractIOResourceHandler implements ResourceHandler
         {
             requestUrl = requestUrl.substring(0, requestUrl.indexOf("#/"));
         }
-        if (requestUrl.startsWith(matchUrl))
+        if (requestUrl.startsWith(prefixMatch))
         {
             String contentType;
             int    i = requestUrl.lastIndexOf(".");
@@ -49,7 +56,7 @@ public abstract class AbstractIOResourceHandler implements ResourceHandler
             {
                 contentType = ContentTypeDist.getOrDefault(requestUrl.substring(i), "text/html");
             }
-            process(httpRequest, pipeline, requestUrl.substring(matchUrlLength), contentType);
+            process(httpRequest, pipeline, requestUrl.substring(len), contentType);
             return true;
         }
         else

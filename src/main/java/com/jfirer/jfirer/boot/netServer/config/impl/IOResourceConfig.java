@@ -2,16 +2,20 @@ package com.jfirer.jfirer.boot.netServer.config.impl;
 
 import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
 import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
+import lombok.Data;
+import lombok.experimental.Accessors;
 
+@Data
+@Accessors(chain = true)
 public class IOResourceConfig implements ResourceConfig
 {
-    private final String matchUrl;
+    private final String prefixMatch;
     private final String path;
 
-    public IOResourceConfig(String matchUrl, String path)
+    public IOResourceConfig(String prefixMatch, String path)
     {
-        this.matchUrl = matchUrl;
-        this.path     = path;
+        this.prefixMatch = prefixMatch;
+        this.path        = path;
     }
 
     @Override
@@ -19,11 +23,11 @@ public class IOResourceConfig implements ResourceConfig
     {
         if (path.startsWith("classpath:"))
         {
-            return new ClassResourceHandler(matchUrl, path);
+            return new ClassResourceHandler(prefixMatch, path);
         }
         else if (path.startsWith("file:"))
         {
-            return new FileResourceHandler(matchUrl, path);
+            return new FileResourceHandler(prefixMatch, path);
         }
         else
         {
