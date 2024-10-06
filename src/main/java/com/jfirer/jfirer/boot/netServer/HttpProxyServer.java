@@ -12,23 +12,18 @@ import com.jfirer.jnet.server.AioServer;
 
 import java.util.function.Consumer;
 
-public class NetServer
+public class HttpProxyServer
 {
     private int                          port;
     private TransferProcessor.Location[] locations;
 
-    public NetServer(int port, TransferProcessor.Location[] locations)
+    public HttpProxyServer(int port, TransferProcessor.Location[] locations)
     {
         this.port      = port;
         this.locations = locations;
     }
 
     public void start()
-    {
-        start(false);
-    }
-
-    public void start(boolean useVirtualThread)
     {
         if (CodeLocation.getMainMethodInClass() == null)
         {

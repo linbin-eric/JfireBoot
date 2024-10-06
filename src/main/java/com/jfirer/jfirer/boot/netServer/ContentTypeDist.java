@@ -235,9 +235,7 @@ public class ContentTypeDist
         dist.put(".jp2", "image/jp2");
         dist.put(".jpc", "image/jp2");
         dist.put(".jpe", "image/jpeg");
-        dist.put(".jpeg", "image/jpeg");
         dist.put(".jpf", "image/jp2");
-        dist.put(".jpg", "image/jpeg");
         dist.put(".jpr", "application/x-jbuilder-project");
         dist.put(".jpx", "image/jp2");
         dist.put(".js", "application/javascript");
@@ -702,5 +700,10 @@ public class ContentTypeDist
     public static String get(String key)
     {
         return dist.get(key);
+    }
+
+    public static String getOrDefault(String key, String defaultStr)
+    {
+        return dist.getOrDefault(key, defaultStr);
     }
 }
