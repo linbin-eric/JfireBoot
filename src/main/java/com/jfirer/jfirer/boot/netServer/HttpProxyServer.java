@@ -15,8 +15,8 @@ import java.util.function.Consumer;
 
 public class HttpProxyServer
 {
-    private int              port;
-    private ResourceConfig[] configs;
+    private          int              port;
+    private volatile ResourceConfig[] configs;
 
     public HttpProxyServer(int port, ResourceConfig[] configs)
     {
@@ -43,5 +43,10 @@ public class HttpProxyServer
         };
         AioServer aioServer = AioServer.newAioServer(channelConfig, s::accept);
         aioServer.start();
+    }
+
+    public void resetConfigs(ResourceConfig[] configs)
+    {
+        this.configs = configs;
     }
 }

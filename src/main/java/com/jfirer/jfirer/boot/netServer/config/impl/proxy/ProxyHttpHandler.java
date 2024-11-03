@@ -1,4 +1,4 @@
-package com.jfirer.jfirer.boot.netServer.config.impl;
+package com.jfirer.jfirer.boot.netServer.config.impl.proxy;
 
 import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
 import com.jfirer.jnet.common.api.Pipeline;
@@ -10,7 +10,7 @@ import com.jfirer.jnet.extend.http.client.PartOfBody;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 
-public sealed abstract class ProxyHttpHandler implements ResourceHandler permits  PrefixMatchProxyHttpHandler
+public sealed abstract class ProxyHttpHandler implements ResourceHandler permits  PrefixMatchProxyHttpHandler,FullMatchProxyHttpHandler
 {
     protected void proxyBackendUrl(HttpRequest request, Pipeline pipeline, String backendUrl)
     {

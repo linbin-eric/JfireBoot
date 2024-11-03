@@ -1,4 +1,4 @@
-package com.jfirer.jfirer.boot.netServer.config.impl;
+package com.jfirer.jfirer.boot.netServer.config.impl.proxy;
 
 import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.baseutil.IoUtil;

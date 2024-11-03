@@ -2,6 +2,8 @@ package com.jfirer.jfirer.boot.netServer.config.impl;
 
 import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
 import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
+import com.jfirer.jfirer.boot.netServer.config.impl.proxy.ClassResourceHandler;
+import com.jfirer.jfirer.boot.netServer.config.impl.proxy.FileResourceHandler;
 import lombok.Data;
 import lombok.experimental.Accessors;
 

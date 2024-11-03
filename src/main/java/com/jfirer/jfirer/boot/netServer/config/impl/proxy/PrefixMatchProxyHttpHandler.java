@@ -1,5 +1,6 @@
-package com.jfirer.jfirer.boot.netServer.config.impl;
+package com.jfirer.jfirer.boot.netServer.config.impl.proxy;
 
+import com.jfirer.baseutil.STR;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 
@@ -11,9 +12,22 @@ public final class PrefixMatchProxyHttpHandler extends ProxyHttpHandler
 
     public PrefixMatchProxyHttpHandler(String prefixMatch, String proxy)
     {
-        this.prefixMatch = prefixMatch;
-        len              = prefixMatch.length();
+        isValidPrefix(prefixMatch);
+        this.prefixMatch = prefixMatch.substring(0, prefixMatch.length() - 1);
+        len              = this.prefixMatch.length();
         this.proxy       = proxy;
+    }
+
+    private void isValidPrefix(String str)
+    {
+        if (str.endsWith("/*") && str.chars().filter(c -> c == '*').count() == 1)
+        {
+            ;
+        }
+        else
+        {
+            throw new IllegalArgumentException(STR.format("{}不是合规的前缀匹配地址", str));
+        }
     }
 
     @Override
