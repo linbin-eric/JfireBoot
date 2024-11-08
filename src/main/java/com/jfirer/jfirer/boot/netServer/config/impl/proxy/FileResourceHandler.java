@@ -1,7 +1,7 @@
 package com.jfirer.jfirer.boot.netServer.config.impl.proxy;
 
-import com.jfirer.baseutil.CodeLocation;
 import com.jfirer.baseutil.IoUtil;
+import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.baseutil.STR;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
@@ -26,7 +26,7 @@ public final class FileResourceHandler extends AbstractIOResourceHandler
         }
         else
         {
-            File tmp = CodeLocation.getFilePathOfMainMethodClass();
+            File tmp = RuntimeJVM.getDirOfMainClass();
             while (path.startsWith("../"))
             {
                 tmp  = tmp.getParentFile();

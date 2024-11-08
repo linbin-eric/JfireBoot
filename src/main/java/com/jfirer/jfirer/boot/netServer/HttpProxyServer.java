@@ -1,6 +1,6 @@
 package com.jfirer.jfirer.boot.netServer;
 
-import com.jfirer.baseutil.CodeLocation;
+import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.jfirer.boot.http.OptionsProcessor;
 import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
 import com.jfirer.jnet.common.api.ChannelContext;
@@ -26,7 +26,7 @@ public class HttpProxyServer
 
     public void start()
     {
-        if (CodeLocation.getMainMethodInClass() == null)
+        if (RuntimeJVM.getDirOfMainClass() == null)
         {
             throw new NullPointerException("Main Class not register");
         }
