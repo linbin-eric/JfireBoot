@@ -10,7 +10,7 @@ import com.jfirer.jnet.extend.http.client.PartOfBody;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.decode.HttpResponse;
 
-public sealed abstract class ProxyHttpHandler implements ResourceHandler permits  PrefixMatchProxyHttpHandler,FullMatchProxyHttpHandler
+public sealed abstract class ProxyHttpHandler implements ResourceHandler permits PrefixMatchProxyHttpHandler, FullMatchProxyHttpHandler
 {
     protected void proxyBackendUrl(HttpRequest request, Pipeline pipeline, String backendUrl)
     {
@@ -39,9 +39,13 @@ public sealed abstract class ProxyHttpHandler implements ResourceHandler permits
                 partOfBody.freeBuffer();
             }
             HttpResponse httpResponse = new HttpResponse();
+            httpResponse.setResponseCode(httpReceiveResponse.getHttpCode());
             httpResponse.setAutoSetContentLength(false);
             httpResponse.setAutoSetContentType(false);
-            httpResponse.setBodyBuffer(buffer);
+            if (buffer.remainRead() > 0)
+            {
+                httpResponse.setBodyBuffer(buffer);
+            }
             httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.getHeaders().put(name, value));
             pipeline.fireWrite(httpResponse);
         }
