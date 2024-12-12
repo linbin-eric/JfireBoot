@@ -40,9 +40,10 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
     @Override
     public void read(HttpRequest data, ReadProcessorNode next)
     {
+        String path = "";
         try (HttpRequestExtend requestExtend = HttpRequestExtend.from(data, next.pipeline()))
         {
-            String      path        = requestExtend.getPath();
+            path = requestExtend.getPath();
             PathRequest pathRequest = requestMap.get(path);
             if (pathRequest == null)
             {
@@ -72,7 +73,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
         }
         catch (Throwable e)
         {
-            log.error("请求出现异常", e);
+            log.error("请求出现异常,当前请求路径:{}", path, e);
             HttpResponse response = new HttpResponse();
             response.setBody("error:" + e.toString());
             next.pipeline().fireWrite(response);
