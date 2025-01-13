@@ -41,6 +41,7 @@ public class HttpRequestExtend extends HttpRequest
         httpRequestExtend.setContentLength(request.getContentLength());
         httpRequestExtend.setContentType(request.getContentType());
         httpRequestExtend.setBody(request.getBody());
+        httpRequestExtend.setWholeRequest(request.getWholeRequest());
         httpRequestExtend.parsePath();
         return httpRequestExtend;
     }
