@@ -3,7 +3,6 @@ package com.jfirer.jfirer.boot.netServer;
 import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.jfirer.boot.http.OptionsProcessor;
 import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
-import com.jfirer.jnet.common.api.ChannelContext;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.common.internal.DefaultWorkerGroup;
 import com.jfirer.jnet.common.util.ChannelConfig;
@@ -34,9 +33,8 @@ public class HttpProxyServer
         channelConfig.setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP);
         channelConfig.setWorkerGroup(new DefaultWorkerGroup(Runtime.getRuntime().availableProcessors(), "netServer-worker-"));
         channelConfig.setPort(port);
-        Consumer<ChannelContext> s = channelContext -> {
-            Pipeline pipeline = channelContext.pipeline();
-            pipeline.addReadProcessor(new HttpRequestDecoder(channelConfig.getAllocator()));
+        Consumer<Pipeline> s = pipeline -> {
+            pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new TransferProcessor(configs));
             pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
