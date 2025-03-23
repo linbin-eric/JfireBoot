@@ -3,6 +3,7 @@ package com.jfirer.jfirer.boot.common;
 import com.jfirer.dson.Dson;
 import com.jfirer.jsql.dialect.Dialect;
 import com.jfirer.jsql.executor.impl.NextHolder;
+import com.jfirer.jsql.metadata.TableEntityInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.AnnotatedElement;
@@ -21,10 +22,10 @@ public class SqlLog extends NextHolder
     }
 
     @Override
-    public String insertWithReturnKey(String sql, List<Object> params, Connection connection, Dialect dialect) throws SQLException
+    public String insertWithReturnKey(String sql, List<Object> params, Connection connection, Dialect dialect, TableEntityInfo.ColumnInfo pkInfo) throws SQLException
     {
         log.trace("执行的sql:{},参数：{}", sql, params);
-        return next.insertWithReturnKey(sql, params, connection, dialect);
+        return next.insertWithReturnKey(sql, params, connection, dialect, pkInfo);
     }
 
     @Override
