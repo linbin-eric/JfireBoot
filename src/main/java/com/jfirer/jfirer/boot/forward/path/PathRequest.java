@@ -6,6 +6,8 @@ import com.jfirer.baseutil.reflect.ReflectUtil;
 import com.jfirer.baseutil.reflect.valueaccessor.ValueAccessor;
 import com.jfirer.dson.Dson;
 import com.jfirer.jfire.core.bean.BeanDefinition;
+import com.jfirer.jfireel.expression.impl.operand.ElseOperand;
+import com.jfirer.jfirer.boot.http.BinaryPart;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
@@ -89,6 +91,10 @@ public class PathRequest
                     {
                         Class parameterType = parameterTypes[i];
                         paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Enum.valueOf(parameterType, (String) value) : new IllegalArgumentException());
+                    }
+                    else if (List.class.equals(parameterTypes[i]) && method.getGenericParameterTypes()[i] instanceof ParameterizedType && ((ParameterizedType) method.getGenericParameterTypes()[i]).getActualTypeArguments()[0] == BinaryPart.class)
+                    {
+                        paramValueGenerators[i] = new BinaryPartParse();
                     }
                     else
                     {
@@ -178,6 +184,28 @@ public class PathRequest
         public Object apply(HttpRequestExtend requestExtend)
         {
             return Dson.fromString(type, requestExtend.getUtf8StrBody());
+        }
+    }
+
+    class BinaryPartParse implements Function<HttpRequestExtend, Object>
+    {
+        @Override
+        public Object apply(HttpRequestExtend httpRequestExtend)
+        {
+            return httpRequestExtend.getParamMap().values().stream()//
+                                    .filter(o -> {
+                                        if (o instanceof HttpRequestExtend.BoundaryPart part)
+                                        {
+                                            return part.isBinary();
+                                        }
+                                        else
+                                        {
+                                            return false;
+                                        }
+                                    })//
+                                    .map(p -> new BinaryPart().setData(((HttpRequestExtend.BoundaryPart) p).getData()).setFileName(((HttpRequestExtend.BoundaryPart) p).getFileName())//
+                                                              .setFieldName(((HttpRequestExtend.BoundaryPart) p).getFieldName())//
+                                    ).toList();
         }
     }
 
