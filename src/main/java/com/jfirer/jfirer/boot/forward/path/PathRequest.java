@@ -31,7 +31,7 @@ public class PathRequest
     private String                                path;
     private Function<HttpRequestExtend, Object>[] paramValueGenerators;
     private Method                                method;
-    private BeanDefinition                        beanDefinition;
+    private Object                                host;
     private RestfulMatch                          restfulMatch;
     private boolean                               needDeserializateJsonToParamMap = false;
     private RequestType                           requestType;
@@ -41,11 +41,11 @@ public class PathRequest
         JsonPost, UrlFormPost, MultiPost
     }
 
-    public PathRequest(Method method, BeanDefinition beanDefinition)
+    public PathRequest(Method method, Object host)
     {
         this.method         = method;
         requestType         = method.isAnnotationPresent(UrlFormPost.class) ? RequestType.UrlFormPost : method.isAnnotationPresent(MultiPartPost.class) ? RequestType.MultiPost : RequestType.JsonPost;
-        this.beanDefinition = beanDefinition;
+        this.host = host;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
         if (path.contains("${"))
@@ -131,7 +131,7 @@ public class PathRequest
                 requestExtend.parseMultiPartToParamMap();
             }
         }
-        return method.invoke(beanDefinition.getBean(), Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
+        return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
     }
 
     class SimpleClassParse implements Function<HttpRequestExtend, Object>

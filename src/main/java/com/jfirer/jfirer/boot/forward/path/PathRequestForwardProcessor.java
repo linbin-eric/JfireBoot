@@ -16,23 +16,16 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Resource
 @Slf4j
 public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
 {
-    @Resource
-    private ApplicationContext       applicationContext;
     private Map<String, PathRequest> requestMap;
     private PathRequest[]            restfulRequests;
 
-    @PostConstruct
-    public void init()
+    public PathRequestForwardProcessor(Map<String, PathRequest> requestMap)
     {
-        requestMap      = applicationContext.getAllBeanRegisterInfos().stream()//
-                                            .flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
-                                            .filter(method -> method.isAnnotationPresent(Path.class))//
-                                            .map(method -> new PathRequest(method, applicationContext.getBeanRegisterInfo(method.getDeclaringClass()).get()))//
-                                            .collect(Collectors.toMap(PathRequest::getPath, Function.identity()));
+        this.requestMap  =requestMap;
+
         restfulRequests = requestMap.values().stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
     }
 
