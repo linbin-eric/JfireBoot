@@ -1,5 +1,6 @@
 package com.jfirer.jfirer.boot.http;
 
+import com.jfirer.baseutil.StringUtil;
 import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.forward.path.Path;
 import com.jfirer.jfirer.boot.forward.path.PathRequest;
@@ -16,6 +17,21 @@ import java.util.stream.Collectors;
 
 public class HttpAppServer
 {
+    public void start(ChannelConfig channelConfig, Map<String, PathRequest> requestMap, String webDir)
+    {
+        AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
+            pipeline.addReadProcessor(new HttpRequestDecoder());
+            pipeline.addReadProcessor(new OptionsProcessor());
+            ResourceProcessor resourceProcessor = new ResourceProcessor(webDir);
+            pipeline.addReadProcessor(resourceProcessor);
+            pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
+            pipeline.addReadProcessor(new NotFoundUrlProcessor(resourceProcessor));
+            pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
+            pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
+        });
+        aioServer.start();
+    }
+
     public void start(ChannelConfig channelConfig, Map<String, PathRequest> requestMap)
     {
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
@@ -36,6 +52,16 @@ public class HttpAppServer
     public void start(int port, ApplicationContext context)
     {
         start(port, parseFromApplication(context));
+    }
+
+    public void start(int port, Map<String, PathRequest> requestMap, String webDir)
+    {
+        start(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP).setWorkerGroup(ChannelConfig.DEFAULT_WORKER_GROUP), requestMap, webDir);
+    }
+
+    public void start(int port, ApplicationContext context, String webDir)
+    {
+        start(port, parseFromApplication(context), webDir);
     }
 
     public static Map<String, PathRequest> parseFromApplication(ApplicationContext context)
