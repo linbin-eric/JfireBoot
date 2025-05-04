@@ -1,6 +1,5 @@
 package com.jfirer.jfirer.boot.http;
 
-import com.jfirer.baseutil.StringUtil;
 import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.forward.path.Path;
 import com.jfirer.jfirer.boot.forward.path.PathRequest;
@@ -69,7 +68,7 @@ public class HttpAppServer
         return context.getAllBeanRegisterInfos().stream()//
                       .flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
                       .filter(method -> method.isAnnotationPresent(Path.class))//
-                      .map(method -> new PathRequest(method, context.getBeanRegisterInfo(method.getDeclaringClass()).get()))//
+                      .map(method -> new PathRequest(method, context.getBeanRegisterInfo(method.getDeclaringClass()).get().getBean()))//
                       .collect(Collectors.toMap(PathRequest::getPath, Function.identity()));
     }
 }
