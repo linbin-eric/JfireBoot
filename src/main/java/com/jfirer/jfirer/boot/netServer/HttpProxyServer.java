@@ -7,7 +7,7 @@ import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.common.internal.DefaultWorkerGroup;
 import com.jfirer.jnet.common.util.ChannelConfig;
 import com.jfirer.jnet.extend.http.decode.HttpRequestDecoder;
-import com.jfirer.jnet.extend.http.decode.HttpResponseEncoder;
+import com.jfirer.jnet.extend.http.decode.HttpRespEncoder;
 import com.jfirer.jnet.server.AioServer;
 
 import java.util.function.Consumer;
@@ -37,7 +37,7 @@ public class HttpProxyServer
             pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new TransferProcessor(configs));
-            pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
         };
         AioServer aioServer = AioServer.newAioServer(channelConfig, s::accept);
         aioServer.start();

@@ -5,7 +5,7 @@ import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -85,10 +85,10 @@ public class ResourceProcessor implements ReadProcessor<HttpRequest>
             else
             {
                 httpRequest.close();
-                HttpResponse response = new HttpResponse();
-                response.setContentType(staticResource.contentType);
-                response.setBytes_body(staticResource.content);
-                response.getHeaders().put("Cache-Control", "max-age=3600");
+                FullHttpResp response = new FullHttpResp();
+                response.getHead().addHeader("Content-Type", staticResource.contentType);
+                response.getBody().setBodyBytes(staticResource.content);
+                response.getHead().addHeader("Cache-Control", "max-age=3600");
                 next.pipeline().fireWrite(response);
             }
         }

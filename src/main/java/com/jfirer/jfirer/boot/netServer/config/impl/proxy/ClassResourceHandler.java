@@ -4,7 +4,7 @@ import com.jfirer.baseutil.IoUtil;
 import com.jfirer.baseutil.STR;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,9 +47,9 @@ public final class ClassResourceHandler extends AbstractIOResourceHandler
             }
         });
         httpRequest.close();
-        HttpResponse response = new HttpResponse();
-        response.setContentType(tuper.contentType);
-        response.setBytes_body(tuper.bytes);
+        FullHttpResp response = new FullHttpResp();
+        response.getHead().addHeader("Content-Type",contentType);
+        response.getBody().setBodyBytes(tuper.bytes());
         pipeline.fireWrite(response);
     }
 }

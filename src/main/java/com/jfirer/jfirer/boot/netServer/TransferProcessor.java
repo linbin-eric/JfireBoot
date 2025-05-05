@@ -5,7 +5,7 @@ import com.jfirer.jfirer.boot.netServer.config.ResourceHandler;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 
 import java.util.Arrays;
 
@@ -28,8 +28,8 @@ public class TransferProcessor implements ReadProcessor<HttpRequest>
                 return;
             }
         }
-        HttpResponse response = new HttpResponse();
-        response.setBody("not found address:" + request.getUrl());
+        FullHttpResp response = new FullHttpResp();
+        response.getBody().setBodyText("not found address:" + request.getUrl());
         next.pipeline().fireWrite(response);
     }
 }

@@ -3,7 +3,7 @@ package com.jfirer.jfirer.boot.http;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 
 public class OptionsProcessor implements ReadProcessor<HttpRequest>
 {
@@ -12,7 +12,7 @@ public class OptionsProcessor implements ReadProcessor<HttpRequest>
     {
         if (request.getMethod().equalsIgnoreCase("options"))
         {
-            HttpResponse response = new HttpResponse();
+            FullHttpResp response = new FullHttpResp();
             next.pipeline().fireWrite(response);
         }
         else

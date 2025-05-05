@@ -6,7 +6,7 @@ import com.jfirer.jfirer.boot.forward.path.PathRequest;
 import com.jfirer.jfirer.boot.forward.path.PathRequestForwardProcessor;
 import com.jfirer.jnet.common.util.ChannelConfig;
 import com.jfirer.jnet.extend.http.decode.HttpRequestDecoder;
-import com.jfirer.jnet.extend.http.decode.HttpResponseEncoder;
+import com.jfirer.jnet.extend.http.decode.HttpRespEncoder;
 import com.jfirer.jnet.server.AioServer;
 
 import java.util.Arrays;
@@ -26,7 +26,7 @@ public class HttpAppServer
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             pipeline.addReadProcessor(new NotFoundUrlProcessor(resourceProcessor));
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
         });
         aioServer.start();
     }
@@ -38,7 +38,7 @@ public class HttpAppServer
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpResponseEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
         });
         aioServer.start();
     }

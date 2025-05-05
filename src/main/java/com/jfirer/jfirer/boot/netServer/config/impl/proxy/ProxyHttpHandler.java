@@ -8,7 +8,7 @@ import com.jfirer.jnet.extend.http.client.HttpReceiveResponse;
 import com.jfirer.jnet.extend.http.client.HttpSendRequest;
 import com.jfirer.jnet.extend.http.client.PartOfBody;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 
 public sealed abstract class ProxyHttpHandler implements ResourceHandler permits PrefixMatchProxyHttpHandler, FullMatchProxyHttpHandler
 {
@@ -38,15 +38,13 @@ public sealed abstract class ProxyHttpHandler implements ResourceHandler permits
                 buffer.put(partOfBody.getFullOriginData());
                 partOfBody.freeBuffer();
             }
-            HttpResponse httpResponse = new HttpResponse();
-            httpResponse.setResponseCode(httpReceiveResponse.getHttpCode());
-            httpResponse.setAutoSetContentLength(false);
-            httpResponse.setAutoSetContentType(false);
+            FullHttpResp httpResponse = new FullHttpResp();
+            httpResponse.getHead().setResponseCode(httpReceiveResponse.getHttpCode());
             if (buffer.remainRead() > 0)
             {
-                httpResponse.setBodyBuffer(buffer);
+                httpResponse.getBody().setBodyBuffer(buffer);
             }
-            httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.getHeaders().put(name, value));
+            httpReceiveResponse.getHeaders().forEach((name, value) -> httpResponse.getHead().addHeader(name, value));
             pipeline.fireWrite(httpResponse);
         }
         catch (Exception e)

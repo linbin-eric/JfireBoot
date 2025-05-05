@@ -3,29 +3,42 @@ package com.jfirer.jfirer.boot.http;
 import com.jfirer.dson.Dson;
 import com.jfirer.jnet.common.api.WriteProcessor;
 import com.jfirer.jnet.common.api.WriteProcessorNode;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
+import com.jfirer.jnet.extend.http.dto.HttpRespBody;
+import com.jfirer.jnet.extend.http.dto.HttpRespHead;
 
 public class ResponseDataToHttpResponse implements WriteProcessor<Object>
 {
     @Override
     public void write(Object data, WriteProcessorNode next)
     {
-        HttpResponse response;
-        if (data instanceof HttpResponse)
+        if (data instanceof HttpRespHead || data instanceof HttpRespBody)
         {
-            response = (HttpResponse) data;
+            next.fireWrite(data);
+        }
+        else if (data instanceof FullHttpResp fullHttpResp)
+        {
+            HttpRespHead head = fullHttpResp.getHead();
+            head.addHeader("Access-Control-Allow-Origin", "*")//
+                .addHeader("Access-Control-Allow-Credentials", "true")//
+                .addHeader("allow", "GET,PUT,POST,HEAD")//
+                .addHeader("access-control-allow-methods", "GET,PUT,POST,HEAD")//
+                .addHeader("Access-Control-Max-Age", "86400")//
+                .addHeader("Access-Control-Allow-Headers", "*");
+            next.fireWrite(data);
         }
         else
         {
-            response = new HttpResponse();
-            response.setBody(Dson.toJson(data));
+            FullHttpResp fullHttpResp = new FullHttpResp();
+            HttpRespHead head         = fullHttpResp.getHead();
+            head.addHeader("Access-Control-Allow-Origin", "*")//
+                .addHeader("Access-Control-Allow-Credentials", "true")//
+                .addHeader("allow", "GET,PUT,POST,HEAD")//
+                .addHeader("access-control-allow-methods", "GET,PUT,POST,HEAD")//
+                .addHeader("Access-Control-Max-Age", "86400")//
+                .addHeader("Access-Control-Allow-Headers", "*");
+            fullHttpResp.getBody().setBodyText(Dson.toJson(data));
+            next.fireWrite(fullHttpResp);
         }
-        response.getHeaders().put("Access-Control-Allow-Origin", "*");
-        response.getHeaders().put("Access-Control-Allow-Credentials", "true");
-        response.getHeaders().put("allow", "GET,PUT,POST,HEAD");
-        response.getHeaders().put("access-control-allow-methods", "GET,PUT,POST,HEAD");
-        response.getHeaders().put("Access-Control-Max-Age", "86400");
-        response.getHeaders().put("Access-Control-Allow-Headers", "*");
-        next.fireWrite(response);
     }
 }

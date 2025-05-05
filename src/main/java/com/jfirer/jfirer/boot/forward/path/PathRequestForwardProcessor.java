@@ -1,20 +1,14 @@
 package com.jfirer.jfirer.boot.forward.path;
 
-import com.jfirer.baseutil.PostConstruct;
-import com.jfirer.baseutil.Resource;
-import com.jfirer.jfire.core.ApplicationContext;
 import com.jfirer.jfirer.boot.common.TraceId;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Arrays;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
@@ -24,8 +18,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
 
     public PathRequestForwardProcessor(Map<String, PathRequest> requestMap)
     {
-        this.requestMap  =requestMap;
-
+        this.requestMap = requestMap;
         restfulRequests = requestMap.values().stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
     }
 
@@ -67,8 +60,8 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
         catch (Throwable e)
         {
             log.error("请求出现异常,当前请求路径:{}", path, e);
-            HttpResponse response = new HttpResponse();
-            response.setBody("error:" + e.toString());
+            FullHttpResp response = new FullHttpResp();
+            response.getBody().setBodyText("error:" + e.toString());
             next.pipeline().fireWrite(response);
         }
     }

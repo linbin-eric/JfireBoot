@@ -5,13 +5,12 @@ import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.baseutil.STR;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpResponse;
+import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 public final class FileResourceHandler extends AbstractIOResourceHandler
 {
@@ -50,9 +49,9 @@ public final class FileResourceHandler extends AbstractIOResourceHandler
             {
                 byte[] bytes = IoUtil.readAllBytes(inputStream);
                 httpRequest.close();
-                HttpResponse response = new HttpResponse();
-                response.setContentType(contentType);
-                response.setBytes_body(bytes);
+                FullHttpResp response = new FullHttpResp();
+                response.getHead().addHeader("Content-Type", contentType);
+                response.getBody().setBodyBytes(bytes);
                 pipeline.fireWrite(response);
             }
             catch (IOException e)
@@ -63,9 +62,9 @@ public final class FileResourceHandler extends AbstractIOResourceHandler
         else
         {
             httpRequest.close();
-            HttpResponse response = new HttpResponse();
-            response.setBytes_body(STR.format("not available path:{},not find in :{}", httpRequest.getUrl(), resourceFile.getAbsolutePath()).getBytes(StandardCharsets.UTF_8));
-            response.setContentType("text/html;charset=utf-8");
+            FullHttpResp response = new FullHttpResp();
+            response.getHead().addHeader("Content-Type", "text/html;charset=utf-8");
+            response.getBody().setBodyText(STR.format("not available path:{},not find in :{}", httpRequest.getUrl(), resourceFile.getAbsolutePath()));
             pipeline.fireWrite(response);
         }
     }
