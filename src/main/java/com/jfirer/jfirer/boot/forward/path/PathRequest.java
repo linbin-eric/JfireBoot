@@ -1,18 +1,19 @@
 package com.jfirer.jfirer.boot.forward.path;
 
+import com.jfirer.baseutil.StringUtil;
 import com.jfirer.baseutil.bytecode.support.AnnotationContext;
 import com.jfirer.baseutil.bytecode.util.BytecodeUtil;
 import com.jfirer.baseutil.reflect.ReflectUtil;
 import com.jfirer.baseutil.reflect.valueaccessor.ValueAccessor;
 import com.jfirer.dson.Dson;
-import com.jfirer.jfire.core.bean.BeanDefinition;
-import com.jfirer.jfireel.expression.impl.operand.ElseOperand;
+import com.jfirer.jfirer.boot.forward.openapi.JsonAttribute;
 import com.jfirer.jfirer.boot.http.BinaryPart;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.api.Pipeline;
 import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import lombok.Data;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -43,9 +44,9 @@ public class PathRequest
 
     public PathRequest(Method method, Object host)
     {
-        this.method         = method;
-        requestType         = method.isAnnotationPresent(UrlFormPost.class) ? RequestType.UrlFormPost : method.isAnnotationPresent(MultiPartPost.class) ? RequestType.MultiPost : RequestType.JsonPost;
-        this.host = host;
+        this.method = method;
+        requestType = method.isAnnotationPresent(UrlFormPost.class) ? RequestType.UrlFormPost : method.isAnnotationPresent(MultiPartPost.class) ? RequestType.MultiPost : RequestType.JsonPost;
+        this.host   = host;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
         if (path.contains("${"))
@@ -54,6 +55,9 @@ public class PathRequest
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
+        /**
+         * 如果存在简单类型，那么进行Json识别的时候，就要将识别后的Json放入ParamMap中。
+         */
         needDeserializateJsonToParamMap = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.getClassId(type) != ReflectUtil.CLASS_OBJECT);
         paramValueGenerators            = new Function[paramNames.length];
         for (int i = 0; i < paramNames.length; i++)
@@ -98,11 +102,21 @@ public class PathRequest
                     }
                     else
                     {
-                        switch (requestType)
+                        Annotation[] parameterAnnotation = method.getParameterAnnotations()[i];
+                        if (Arrays.stream(parameterAnnotation).anyMatch(v -> v instanceof JsonAttribute))
                         {
-                            case JsonPost -> paramValueGenerators[i] = new JsonParse(method.getGenericParameterTypes()[i]);
-                            case UrlFormPost -> {}
-                            case MultiPost -> paramValueGenerators[i] = new FormObjectParse(parameterTypes[i]);
+                            JsonAttribute jsonAttribute = (JsonAttribute) Arrays.stream(parameterAnnotation).filter(v -> v instanceof JsonAttribute).findAny().get();
+                            String        name          = StringUtil.isNotBlank(jsonAttribute.value()) ? jsonAttribute.value() : paramNames[i];
+                            paramValueGenerators[i] = new AttributeParse(method.getGenericParameterTypes()[i], name);
+                        }
+                        else
+                        {
+                            switch (requestType)
+                            {
+                                case JsonPost -> paramValueGenerators[i] = new JsonParse(method.getGenericParameterTypes()[i]);
+                                case UrlFormPost -> {}
+                                case MultiPost -> paramValueGenerators[i] = new FormObjectParse(parameterTypes[i]);
+                            }
                         }
                     }
                 }
@@ -184,6 +198,24 @@ public class PathRequest
         public Object apply(HttpRequestExtend requestExtend)
         {
             return Dson.fromString(type, requestExtend.getUtf8StrBody());
+        }
+    }
+
+    class AttributeParse implements Function<HttpRequestExtend, Object>
+    {
+        private Type   type;
+        private String attribute;
+
+        public AttributeParse(Type type, String attribute)
+        {
+            this.type      = type;
+            this.attribute = attribute;
+        }
+
+        @Override
+        public Object apply(HttpRequestExtend requestExtend)
+        {
+            return Dson.fromStringByAttribute(attribute, type, requestExtend.getUtf8StrBody());
         }
     }
 

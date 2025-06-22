@@ -26,7 +26,7 @@ public class HttpAppServer
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             pipeline.addReadProcessor(new NotFoundUrlProcessor(resourceProcessor));
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         });
         aioServer.start();
     }
@@ -38,14 +38,14 @@ public class HttpAppServer
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         });
         aioServer.start();
     }
 
     public void start(int port, Map<String, PathRequest> requestMap)
     {
-        start(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP).setWorkerGroup(ChannelConfig.DEFAULT_WORKER_GROUP), requestMap);
+        start(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP), requestMap);
     }
 
     public void start(int port, ApplicationContext context)
@@ -55,7 +55,7 @@ public class HttpAppServer
 
     public void start(int port, Map<String, PathRequest> requestMap, String webDir)
     {
-        start(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP).setWorkerGroup(ChannelConfig.DEFAULT_WORKER_GROUP), requestMap, webDir);
+        start(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP), requestMap, webDir);
     }
 
     public void start(int port, ApplicationContext context, String webDir)

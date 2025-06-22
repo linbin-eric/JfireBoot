@@ -4,7 +4,6 @@ import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.jfirer.boot.http.OptionsProcessor;
 import com.jfirer.jfirer.boot.netServer.config.ResourceConfig;
 import com.jfirer.jnet.common.api.Pipeline;
-import com.jfirer.jnet.common.internal.DefaultWorkerGroup;
 import com.jfirer.jnet.common.util.ChannelConfig;
 import com.jfirer.jnet.extend.http.decode.HttpRequestDecoder;
 import com.jfirer.jnet.extend.http.decode.HttpRespEncoder;
@@ -31,13 +30,12 @@ public class HttpProxyServer
         }
         ChannelConfig channelConfig = new ChannelConfig();
         channelConfig.setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP);
-        channelConfig.setWorkerGroup(new DefaultWorkerGroup(Runtime.getRuntime().availableProcessors(), "netServer-worker-"));
         channelConfig.setPort(port);
         Consumer<Pipeline> s = pipeline -> {
             pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new TransferProcessor(configs));
-            pipeline.addWriteProcessor(new HttpRespEncoder(channelConfig.getAllocator()));
+            pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         };
         AioServer aioServer = AioServer.newAioServer(channelConfig, s::accept);
         aioServer.start();
