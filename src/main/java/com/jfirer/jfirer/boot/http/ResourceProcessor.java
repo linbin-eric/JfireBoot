@@ -1,6 +1,7 @@
 package com.jfirer.jfirer.boot.http;
 
 import com.jfirer.baseutil.IoUtil;
+import com.jfirer.baseutil.RuntimeJVM;
 import com.jfirer.jfirer.boot.netServer.ContentTypeDist;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
@@ -21,8 +22,9 @@ public class ResourceProcessor implements ReadProcessor<HttpRequest>
     {
     }
 
-    private       ConcurrentMap<String, StaticResource> map = new ConcurrentHashMap<>();
+    private       ConcurrentMap<String, StaticResource> map      = new ConcurrentHashMap<>();
     private final String                                prefixPath;
+    private final boolean                               runInIDE = RuntimeJVM.tryDetectRunningInJar() == 2;
 
     public ResourceProcessor(String prefixPath) {this.prefixPath = prefixPath;}
 
@@ -47,49 +49,99 @@ public class ResourceProcessor implements ReadProcessor<HttpRequest>
                 url = "/index.html";
             }
             String purePath = url.contains("?") ? url.substring(0, url.indexOf("?")) : url;
-            StaticResource staticResource = map.computeIfAbsent(purePath, str -> {
+            if (runInIDE)
+            {
                 String contentType;
-                int    i = str.lastIndexOf(".");
+                int    i = purePath.lastIndexOf(".");
                 if (i == -1)
                 {
                     contentType = "text/html";
                 }
                 else
                 {
-                    String suffix = str.substring(i);
+                    String suffix = purePath.substring(i);
                     String s      = ContentTypeDist.get(suffix);
                     contentType = s == null ? "text/html" : s;
                 }
-                String realClassResourcePath = prefixPath + str;
+                String realClassResourcePath = prefixPath + purePath;
                 log.debug("当前请求路径为:{}", realClassResourcePath);
+                StaticResource staticResource = null;
                 try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(realClassResourcePath))
                 {
                     if (resourceAsStream != null)
                     {
-                        return new StaticResource(IoUtil.readAllBytes(resourceAsStream), contentType);
+                        staticResource = new StaticResource(IoUtil.readAllBytes(resourceAsStream), contentType);
                     }
                     else
                     {
-                        return null;
+                        ;
                     }
                 }
                 catch (IOException e)
                 {
                     throw new RuntimeException(e);
                 }
-            });
-            if (staticResource == null)
-            {
-                next.fireRead(httpRequest);
+                if (staticResource == null)
+                {
+                    next.fireRead(httpRequest);
+                }
+                else
+                {
+                    httpRequest.close();
+                    FullHttpResp response = new FullHttpResp();
+                    response.getHead().addHeader("Content-Type", staticResource.contentType);
+                    response.getBody().setBodyBytes(staticResource.content);
+                    response.getHead().addHeader("Cache-Control", "no-cache");
+                    response.getHead().addHeader("Connection", "keep-alive");
+                    next.pipeline().fireWrite(response);
+                }
             }
             else
             {
-                httpRequest.close();
-                FullHttpResp response = new FullHttpResp();
-                response.getHead().addHeader("Content-Type", staticResource.contentType);
-                response.getBody().setBodyBytes(staticResource.content);
-                response.getHead().addHeader("Cache-Control", "max-age=3600");
-                next.pipeline().fireWrite(response);
+                StaticResource staticResource = map.computeIfAbsent(purePath, str -> {
+                    String contentType;
+                    int    i = str.lastIndexOf(".");
+                    if (i == -1)
+                    {
+                        contentType = "text/html";
+                    }
+                    else
+                    {
+                        String suffix = str.substring(i);
+                        String s      = ContentTypeDist.get(suffix);
+                        contentType = s == null ? "text/html" : s;
+                    }
+                    String realClassResourcePath = prefixPath + str;
+                    log.debug("当前请求路径为:{}", realClassResourcePath);
+                    try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(realClassResourcePath))
+                    {
+                        if (resourceAsStream != null)
+                        {
+                            return new StaticResource(IoUtil.readAllBytes(resourceAsStream), contentType);
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+                    catch (IOException e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                });
+                if (staticResource == null)
+                {
+                    next.fireRead(httpRequest);
+                }
+                else
+                {
+                    httpRequest.close();
+                    FullHttpResp response = new FullHttpResp();
+                    response.getHead().addHeader("Content-Type", staticResource.contentType);
+                    response.getBody().setBodyBytes(staticResource.content);
+                    response.getHead().addHeader("Cache-Control", "max-age=3600");
+                    next.pipeline().fireWrite(response);
+                }
             }
         }
     }
