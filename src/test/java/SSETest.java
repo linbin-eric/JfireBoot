@@ -69,7 +69,7 @@ public class SSETest implements AwareContextInited
     @Override
     public void aware(ApplicationContext applicationContext)
     {
-        new HttpAppServer().start(80, HttpAppServer.parseFromApplication(applicationContext), "web");
+        new HttpAppServer().start(80, applicationContext, "web");
         log.debug("启动成功");
     }
 }

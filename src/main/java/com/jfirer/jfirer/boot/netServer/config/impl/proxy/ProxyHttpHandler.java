@@ -23,7 +23,7 @@ public sealed abstract class ProxyHttpHandler implements ResourceHandler permits
         }
         else
         {
-            IoBuffer copyed = HttpClient.ALLOCATOR.ioBuffer(request.getBody().remainRead());
+            IoBuffer copyed = HttpClient.ALLOCATOR.allocate(request.getBody().remainRead());
             copyed.put(request.getBody());
             httpSendRequest.setBody(copyed);
             request.close();
@@ -31,7 +31,7 @@ public sealed abstract class ProxyHttpHandler implements ResourceHandler permits
         try (HttpReceiveResponse httpReceiveResponse = HttpClient.newCall(httpSendRequest))
         {
             httpReceiveResponse.waitForReceiveFinish();
-            IoBuffer   buffer = HttpClient.ALLOCATOR.ioBuffer(httpReceiveResponse.getContentLength() > 0 ? httpReceiveResponse.getContentLength() : 1024);
+            IoBuffer   buffer = HttpClient.ALLOCATOR.allocate(httpReceiveResponse.getContentLength() > 0 ? httpReceiveResponse.getContentLength() : 1024);
             PartOfBody partOfBody;
             while ((partOfBody = httpReceiveResponse.pollChunk()) != null && !partOfBody.isEndOrTerminateOfBody())
             {
