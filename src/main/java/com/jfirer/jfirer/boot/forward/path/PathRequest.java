@@ -197,7 +197,15 @@ public class PathRequest
         @Override
         public Object apply(HttpRequestExtend requestExtend)
         {
-            return Dson.fromString(type, requestExtend.getUtf8StrBody());
+            String utf8StrBody = requestExtend.getUtf8StrBody();
+            if (utf8StrBody != null)
+            {
+                return Dson.fromString(type, utf8StrBody);
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 

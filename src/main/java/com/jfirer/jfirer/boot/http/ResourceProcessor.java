@@ -64,7 +64,7 @@ public class ResourceProcessor implements ReadProcessor<HttpRequest>
                     contentType = s == null ? "text/html" : s;
                 }
                 String realClassResourcePath = prefixPath + purePath;
-                log.debug("当前请求路径为:{}", realClassResourcePath);
+                log.trace("当前请求路径为:{}", realClassResourcePath);
                 StaticResource staticResource = null;
                 try (InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(realClassResourcePath))
                 {
