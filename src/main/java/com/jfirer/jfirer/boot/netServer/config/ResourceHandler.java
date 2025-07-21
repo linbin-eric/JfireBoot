@@ -6,4 +6,6 @@ import com.jfirer.jnet.extend.http.decode.HttpRequest;
 public interface ResourceHandler
 {
     boolean process(HttpRequest request, Pipeline pipeline);
+
+    default void readFailed(Throwable e) {}
 }

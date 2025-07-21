@@ -32,4 +32,21 @@ public class TransferProcessor implements ReadProcessor<HttpRequest>
         response.getBody().setBodyText("not found address:" + request.getUrl());
         next.pipeline().fireWrite(response);
     }
+
+    @Override
+    public void readFailed(Throwable e, ReadProcessorNode next)
+    {
+        try
+        {
+            for (ResourceHandler handler : handlers)
+            {
+                handler.readFailed(e);
+            }
+        }
+        finally
+        {
+            ;
+        }
+        next.fireReadFailed(e);
+    }
 }

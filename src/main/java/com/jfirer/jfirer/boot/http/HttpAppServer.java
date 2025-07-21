@@ -38,9 +38,12 @@ public class HttpAppServer
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
             pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());
-            String webDir = param.getWebDir();
+            String                               webDir          = param.getWebDir();
+            NotFoundUrlProcessor.NotFoundBarrier notFoundBarrier = null;
             if (StringUtil.isNotBlank(webDir))
             {
+                notFoundBarrier = new NotFoundUrlProcessor.NotFoundBarrier();
+                pipeline.addReadProcessor(notFoundBarrier);
                 pipeline.addReadProcessor(new ResourceProcessor(webDir));
             }
             if (param.getBeforeProcessor() != null)
@@ -53,7 +56,7 @@ public class HttpAppServer
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             if (StringUtil.isNotBlank(webDir))
             {
-                pipeline.addReadProcessor(new NotFoundUrlProcessor(new ResourceProcessor(webDir)));
+                pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));
             }
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
             pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
