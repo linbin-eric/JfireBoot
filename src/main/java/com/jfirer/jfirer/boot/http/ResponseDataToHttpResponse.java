@@ -3,6 +3,8 @@ package com.jfirer.jfirer.boot.http;
 import com.jfirer.dson.Dson;
 import com.jfirer.jnet.common.api.WriteProcessor;
 import com.jfirer.jnet.common.api.WriteProcessorNode;
+import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
+import com.jfirer.jnet.common.util.DataIgnore;
 import com.jfirer.jnet.extend.http.dto.FullHttpResp;
 import com.jfirer.jnet.extend.http.dto.HttpRespBody;
 import com.jfirer.jnet.extend.http.dto.HttpRespHead;
@@ -12,7 +14,7 @@ public class ResponseDataToHttpResponse implements WriteProcessor<Object>
     @Override
     public void write(Object data, WriteProcessorNode next)
     {
-        if (data instanceof HttpRespHead || data instanceof HttpRespBody)
+        if (data instanceof HttpRespHead || data instanceof HttpRespBody || data instanceof IoBuffer || data instanceof DataIgnore)
         {
             next.fireWrite(data);
         }
