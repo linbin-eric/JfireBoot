@@ -17,7 +17,17 @@ public class OptionsProcessor implements ReadProcessor<HttpRequest>
         }
         else
         {
-            next.fireRead(request);
+            String url = request.getUrl();
+            if (url.equals("/favicon.ico") || url.equals("/robots.txt"))
+            {
+                FullHttpResp response = new FullHttpResp();
+                response.getHead().setResponseCode(404);
+                next.pipeline().fireWrite(response);
+            }
+            else
+            {
+                next.fireRead(request);
+            }
         }
     }
 }

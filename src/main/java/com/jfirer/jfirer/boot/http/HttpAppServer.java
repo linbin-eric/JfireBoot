@@ -26,20 +26,24 @@ public class HttpAppServer
     public static class StartParam
     {
         private ChannelConfig                channelConfig;
-        private Map<String, PathRequest>     requestMap;
+        private ApplicationContext           context;
         private String                       webDir;
         private ReadProcessor<HttpRequest>[] beforeProcessor;
     }
 
-    public void start(StartParam param)
+    public static AioServer start(StartParam param)
     {
-        ChannelConfig channelConfig = param.getChannelConfig();
+        ChannelConfig            channelConfig = param.getChannelConfig();
+        Map<String, PathRequest> requestMap    = parseFromApplication(param.getContext());
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
             pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());
-            String webDir = param.getWebDir();
+            String                               webDir          = param.getWebDir();
+            NotFoundUrlProcessor.NotFoundBarrier notFoundBarrier = null;
             if (StringUtil.isNotBlank(webDir))
             {
+                notFoundBarrier = new NotFoundUrlProcessor.NotFoundBarrier();
+                pipeline.addReadProcessor(notFoundBarrier);
                 pipeline.addReadProcessor(new ResourceProcessor(webDir));
             }
             if (param.getBeforeProcessor() != null)
@@ -49,58 +53,41 @@ public class HttpAppServer
                     pipeline.addReadProcessor(processor);
                 }
             }
-            pipeline.addReadProcessor(new PathRequestForwardProcessor(param.getRequestMap()));
+            pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             if (StringUtil.isNotBlank(webDir))
             {
-                pipeline.addReadProcessor(new NotFoundUrlProcessor(new ResourceProcessor(webDir)));
+                pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));
             }
             pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
             pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         });
         aioServer.start();
+        return aioServer;
     }
 
-    public void start(ChannelConfig channelConfig, Map<String, PathRequest> requestMap, String webDir)
+    public static AioServer start(int port, ApplicationContext context)
     {
-        AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
-            pipeline.addReadProcessor(new HttpRequestDecoder());
-            pipeline.addReadProcessor(new OptionsProcessor());
-            pipeline.addReadProcessor(new ResourceProcessor(webDir));
-            pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
-            pipeline.addReadProcessor(new NotFoundUrlProcessor(new ResourceProcessor(webDir)));
-            pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
-        });
-        aioServer.start();
+        return start(new StartParam().setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
+                                     .setContext(context));
     }
 
-    public void start(ChannelConfig channelConfig, Map<String, PathRequest> requestMap)
+    public static AioServer start(int port, ApplicationContext context, ReadProcessor<HttpRequest>... before)
     {
-        AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
-            pipeline.addReadProcessor(new HttpRequestDecoder());
-            pipeline.addReadProcessor(new OptionsProcessor());
-            pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
-            pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
-            pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
-        });
-        aioServer.start();
+        return start(new StartParam().setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
+                                     .setContext(context)//
+                                     .setBeforeProcessor(before));
     }
 
-    public void start(int port, ApplicationContext context)
+    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<HttpRequest>... before)
     {
-        start(new StartParam().setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
-                              .setRequestMap(parseFromApplication(context)));
+        return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
+                                     .setWebDir(webDir)//
+                                     .setBeforeProcessor(before));
     }
 
-    public void start(int port, ApplicationContext context, String webDir)
+    private static Map<String, PathRequest> parseFromApplication(ApplicationContext context)
     {
-        start(new StartParam().setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
-                              .setRequestMap(parseFromApplication(context))//
-                              .setWebDir(webDir));
-    }
-
-    public static Map<String, PathRequest> parseFromApplication(ApplicationContext context)
-    {
+        context.makeAvailable();
         return context.getAllBeanRegisterInfos().stream()//
                       .flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
                       .filter(method -> method.isAnnotationPresent(Path.class))//
