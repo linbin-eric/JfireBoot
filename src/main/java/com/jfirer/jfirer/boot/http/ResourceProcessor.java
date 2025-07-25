@@ -24,7 +24,7 @@ public class ResourceProcessor implements ReadProcessor<HttpRequest>
 
     private       ConcurrentMap<String, StaticResource> map      = new ConcurrentHashMap<>();
     private final String                                prefixPath;
-    private final boolean                               runInIDE = RuntimeJVM.tryDetectRunningInJar() == 2;
+    private final boolean                               runInIDE = RuntimeJVM.detectRunningInJar();
 
     public ResourceProcessor(String prefixPath) {this.prefixPath = prefixPath;}
 
