@@ -56,6 +56,11 @@ public sealed abstract class AbstractIOResourceHandler implements ResourceHandle
             {
                 contentType = ContentTypeDist.getOrDefault(requestUrl.substring(i), "text/html");
             }
+            int index = requestUrl.indexOf("?");
+            if (index != -1)
+            {
+                requestUrl = requestUrl.substring(0, index);
+            }
             process(httpRequest, pipeline, requestUrl.substring(len), contentType);
             return true;
         }
