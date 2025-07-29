@@ -7,9 +7,8 @@ import com.jfirer.jfirer.boot.forward.path.PathRequest;
 import com.jfirer.jfirer.boot.forward.path.PathRequestForwardProcessor;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.util.ChannelConfig;
-import com.jfirer.jnet.extend.http.decode.HttpRequest;
-import com.jfirer.jnet.extend.http.decode.HttpRequestDecoder;
-import com.jfirer.jnet.extend.http.decode.HttpRespEncoder;
+import com.jfirer.jnet.extend.http.coder.*;
+import com.jfirer.jnet.extend.http.dto.HttpRequest;
 import com.jfirer.jnet.server.AioServer;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -58,7 +57,7 @@ public class HttpAppServer
             {
                 pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));
             }
-            pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
+            pipeline.addWriteProcessor(new DataJsonToRespEncoder());
             pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         });
         aioServer.start();

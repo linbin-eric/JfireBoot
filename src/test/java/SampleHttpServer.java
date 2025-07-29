@@ -1,10 +1,10 @@
-import com.jfirer.jfirer.boot.http.OptionsProcessor;
-import com.jfirer.jfirer.boot.http.ResponseDataToHttpResponse;
+import com.jfirer.jfirer.boot.http.DataJsonToRespEncoder;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
 import com.jfirer.jnet.common.util.ChannelConfig;
-import com.jfirer.jnet.extend.http.decode.*;
+import com.jfirer.jnet.extend.http.coder.*;
 import com.jfirer.jnet.extend.http.dto.FullHttpResp;
+import com.jfirer.jnet.extend.http.dto.HttpRequest;
 import com.jfirer.jnet.server.AioServer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +68,7 @@ public class SampleHttpServer
                     next.pipeline().fireWrite(resp);
                 }
             });
-            pipeline.addWriteProcessor(new ResponseDataToHttpResponse());
+            pipeline.addWriteProcessor(new DataJsonToRespEncoder());
             pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
             pipeline.addWriteProcessor(sslEncoder);
         });

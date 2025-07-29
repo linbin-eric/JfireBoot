@@ -10,7 +10,7 @@ import com.jfirer.jfirer.boot.forward.openapi.JsonAttribute;
 import com.jfirer.jfirer.boot.http.BinaryPart;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.api.Pipeline;
-import com.jfirer.jnet.extend.http.decode.HttpRequest;
+import com.jfirer.jnet.extend.http.dto.HttpRequest;
 import lombok.Data;
 
 import java.lang.annotation.Annotation;

@@ -4,8 +4,8 @@ import com.jfirer.jfirer.boot.common.TraceId;
 import com.jfirer.jfirer.boot.http.HttpRequestExtend;
 import com.jfirer.jnet.common.api.ReadProcessor;
 import com.jfirer.jnet.common.api.ReadProcessorNode;
-import com.jfirer.jnet.extend.http.decode.HttpRequest;
 import com.jfirer.jnet.extend.http.dto.FullHttpResp;
+import com.jfirer.jnet.extend.http.dto.HttpRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
