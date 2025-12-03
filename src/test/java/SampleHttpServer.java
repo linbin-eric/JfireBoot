@@ -1,11 +1,11 @@
-import com.jfirer.jfirer.boot.http.DataJsonToRespEncoder;
-import com.jfirer.jnet.common.api.ReadProcessor;
-import com.jfirer.jnet.common.api.ReadProcessorNode;
-import com.jfirer.jnet.common.util.ChannelConfig;
-import com.jfirer.jnet.extend.http.coder.*;
-import com.jfirer.jnet.extend.http.dto.FullHttpResp;
-import com.jfirer.jnet.extend.http.dto.HttpRequest;
-import com.jfirer.jnet.server.AioServer;
+import cc.jfire.jnet.common.api.ReadProcessor;
+import cc.jfire.jnet.common.api.ReadProcessorNode;
+import cc.jfire.jnet.common.util.ChannelConfig;
+import cc.jfire.jnet.extend.http.coder.*;
+import cc.jfire.jnet.extend.http.dto.FullHttpResp;
+import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.jnet.server.AioServer;
+import cc.jfire.boot.http.DataJsonToRespEncoder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +22,7 @@ public class SampleHttpServer
     {
         // 1. 加载密钥库
         KeyStore keyStore = KeyStore.getInstance("JKS");
-        try (InputStream fis = Thread.currentThread().getContextClassLoader().getResourceAsStream("server.keystore"))
+        try (InputStream fis = Thread.currentThread().getContextClassLoader().getResourceAsStream("keystore.jks"))
         {
             keyStore.load(fis, "123456".toCharArray());
         }
@@ -42,7 +42,8 @@ public class SampleHttpServer
         sslEngine.setEnabledProtocols(new String[]{"TLSv1.2", "TLSv1.3"});
         ChannelConfig channelConfig = new ChannelConfig().setPort(8082);
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
-            SSLEncoder sslEncoder = new SSLEncoder();
+            SSLDecoder sslRequestDecoder = new SSLDecoder(sslEngine);
+            SSLEncoder sslEncoder = new SSLEncoder(sslEngine,sslRequestDecoder);
             try
             {
                 sslEngine.beginHandshake();
@@ -52,7 +53,6 @@ public class SampleHttpServer
                 log.error("异常", e);
                 throw new RuntimeException(e);
             }
-            SSLDecoder sslRequestDecoder = new SSLDecoder(sslEngine, sslEncoder);
             pipeline.addReadProcessor(sslRequestDecoder);
             pipeline.addReadProcessor(new HttpRequestDecoder());
             pipeline.addReadProcessor(new OptionsProcessor());

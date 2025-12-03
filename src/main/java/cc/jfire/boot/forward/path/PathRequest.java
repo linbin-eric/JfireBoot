@@ -1,16 +1,16 @@
-package com.jfirer.jfirer.boot.forward.path;
+package cc.jfire.boot.forward.path;
 
-import com.jfirer.baseutil.StringUtil;
-import com.jfirer.baseutil.bytecode.support.AnnotationContext;
-import com.jfirer.baseutil.bytecode.util.BytecodeUtil;
-import com.jfirer.baseutil.reflect.ReflectUtil;
-import com.jfirer.baseutil.reflect.valueaccessor.ValueAccessor;
-import com.jfirer.dson.Dson;
-import com.jfirer.jfirer.boot.forward.openapi.JsonAttribute;
-import com.jfirer.jfirer.boot.http.BinaryPart;
-import com.jfirer.jfirer.boot.http.HttpRequestExtend;
-import com.jfirer.jnet.common.api.Pipeline;
-import com.jfirer.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.baseutil.StringUtil;
+import cc.jfire.baseutil.bytecode.support.AnnotationContext;
+import cc.jfire.baseutil.bytecode.util.BytecodeUtil;
+import cc.jfire.baseutil.reflect.ReflectUtil;
+import cc.jfire.baseutil.reflect.valueaccessor.ValueAccessor;
+import cc.jfire.dson.Dson;
+import cc.jfire.jnet.common.api.Pipeline;
+import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.boot.forward.openapi.JsonAttribute;
+import cc.jfire.boot.http.BinaryPart;
+import cc.jfire.boot.http.HttpRequestExtend;
 import lombok.Data;
 
 import java.lang.annotation.Annotation;

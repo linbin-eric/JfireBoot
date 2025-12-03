@@ -1,13 +1,11 @@
-package com.jfirer.jfirer.boot.forward.path;
+package cc.jfire.boot.common;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
-public @interface Path
-{
-    String value();
-}
+public @interface TraceId
+{}

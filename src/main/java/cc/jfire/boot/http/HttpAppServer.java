@@ -1,15 +1,16 @@
-package com.jfirer.jfirer.boot.http;
+package cc.jfire.boot.http;
 
-import com.jfirer.baseutil.StringUtil;
-import com.jfirer.jfire.core.ApplicationContext;
-import com.jfirer.jfirer.boot.forward.path.Path;
-import com.jfirer.jfirer.boot.forward.path.PathRequest;
-import com.jfirer.jfirer.boot.forward.path.PathRequestForwardProcessor;
-import com.jfirer.jnet.common.api.ReadProcessor;
-import com.jfirer.jnet.common.util.ChannelConfig;
-import com.jfirer.jnet.extend.http.coder.*;
-import com.jfirer.jnet.extend.http.dto.HttpRequest;
-import com.jfirer.jnet.server.AioServer;
+import cc.jfire.baseutil.RuntimeJVM;
+import cc.jfire.baseutil.StringUtil;
+import cc.jfire.jfire.core.ApplicationContext;
+import cc.jfire.jnet.common.api.ReadProcessor;
+import cc.jfire.jnet.common.util.ChannelConfig;
+import cc.jfire.jnet.extend.http.coder.*;
+import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.jnet.server.AioServer;
+import cc.jfire.boot.forward.path.Path;
+import cc.jfire.boot.forward.path.PathRequest;
+import cc.jfire.boot.forward.path.PathRequestForwardProcessor;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -24,9 +25,9 @@ public class HttpAppServer
     @Accessors(chain = true)
     public static class StartParam
     {
-        private ChannelConfig                channelConfig;
-        private ApplicationContext           context;
-        private String                       webDir;
+        private ChannelConfig      channelConfig;
+        private ApplicationContext context;
+        private String             webDir;
         private ReadProcessor<HttpRequest>[] beforeProcessor;
     }
 
@@ -43,7 +44,7 @@ public class HttpAppServer
             {
                 notFoundBarrier = new NotFoundUrlProcessor.NotFoundBarrier();
                 pipeline.addReadProcessor(notFoundBarrier);
-                pipeline.addReadProcessor(new ResourceProcessor(webDir));
+                pipeline.addReadProcessor(new ResourceProcessor(webDir, RuntimeJVM.detectRunningInJar()));
             }
             if (param.getBeforeProcessor() != null)
             {

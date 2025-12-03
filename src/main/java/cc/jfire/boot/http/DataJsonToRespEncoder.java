@@ -1,12 +1,12 @@
-package com.jfirer.jfirer.boot.http;
+package cc.jfire.boot.http;
 
-import com.jfirer.dson.Dson;
-import com.jfirer.jnet.common.api.WriteProcessor;
-import com.jfirer.jnet.common.api.WriteProcessorNode;
-import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
-import com.jfirer.jnet.common.util.DataIgnore;
-import com.jfirer.jnet.extend.http.dto.FullHttpResp;
-import com.jfirer.jnet.extend.http.dto.HttpRespPart;
+import cc.jfire.dson.Dson;
+import cc.jfire.jnet.common.api.WriteProcessor;
+import cc.jfire.jnet.common.api.WriteProcessorNode;
+import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
+import cc.jfire.jnet.common.util.DataIgnore;
+import cc.jfire.jnet.extend.http.dto.FullHttpResp;
+import cc.jfire.jnet.extend.http.dto.HttpRespPart;
 
 public class DataJsonToRespEncoder implements WriteProcessor<Object>
 {

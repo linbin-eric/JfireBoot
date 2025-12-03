@@ -1,7 +1,7 @@
-package com.jfirer.jfirer.boot.common;
+package cc.jfire.boot.common;
 
-import com.jfirer.baseutil.bytecode.support.AnnotationContext;
-import com.jfirer.jfire.core.aop.notated.support.MatchTargetMethod;
+import cc.jfire.baseutil.bytecode.support.AnnotationContext;
+import cc.jfire.jfire.core.aop.notated.support.MatchTargetMethod;
 
 import java.lang.reflect.Method;
 

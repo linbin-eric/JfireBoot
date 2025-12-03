@@ -1,4 +1,4 @@
-package com.jfirer.jfirer.boot.forward.openapi;
+package cc.jfire.boot.forward.openapi;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

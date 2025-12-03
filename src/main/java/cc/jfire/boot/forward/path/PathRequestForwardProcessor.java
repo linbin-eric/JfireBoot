@@ -1,11 +1,11 @@
-package com.jfirer.jfirer.boot.forward.path;
+package cc.jfire.boot.forward.path;
 
-import com.jfirer.jfirer.boot.common.TraceId;
-import com.jfirer.jfirer.boot.http.HttpRequestExtend;
-import com.jfirer.jnet.common.api.ReadProcessor;
-import com.jfirer.jnet.common.api.ReadProcessorNode;
-import com.jfirer.jnet.extend.http.dto.FullHttpResp;
-import com.jfirer.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.jnet.common.api.ReadProcessor;
+import cc.jfire.jnet.common.api.ReadProcessorNode;
+import cc.jfire.jnet.extend.http.dto.FullHttpResp;
+import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.boot.common.TraceId;
+import cc.jfire.boot.http.HttpRequestExtend;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;

@@ -1,13 +1,13 @@
-package com.jfirer.jfirer.boot.forward.openapi;
+package cc.jfire.boot.forward.openapi;
 
-import com.jfirer.baseutil.StringUtil;
-import com.jfirer.baseutil.bytecode.support.AnnotationContext;
-import com.jfirer.baseutil.bytecode.util.BytecodeUtil;
-import com.jfirer.baseutil.reflect.ReflectUtil;
-import com.jfirer.dson.Dson;
-import com.jfirer.jfire.core.bean.BeanDefinition;
-import com.jfirer.jfirer.boot.http.HttpRequestExtend;
-import com.jfirer.jnet.common.api.Pipeline;
+import cc.jfire.baseutil.StringUtil;
+import cc.jfire.baseutil.bytecode.support.AnnotationContext;
+import cc.jfire.baseutil.bytecode.util.BytecodeUtil;
+import cc.jfire.baseutil.reflect.ReflectUtil;
+import cc.jfire.dson.Dson;
+import cc.jfire.jfire.core.bean.BeanDefinition;
+import cc.jfire.jnet.common.api.Pipeline;
+import cc.jfire.boot.http.HttpRequestExtend;
 import lombok.Getter;
 
 import java.lang.annotation.Annotation;

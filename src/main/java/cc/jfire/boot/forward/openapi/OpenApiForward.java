@@ -1,11 +1,11 @@
-package com.jfirer.jfirer.boot.forward.openapi;
+package cc.jfire.boot.forward.openapi;
 
-import com.jfirer.baseutil.PostConstruct;
-import com.jfirer.baseutil.Resource;
-import com.jfirer.dson.Dson;
-import com.jfirer.jfire.core.ApplicationContext;
-import com.jfirer.jfirer.boot.http.HttpRequestExtend;
-import com.jfirer.jnet.common.util.ReflectUtil;
+import cc.jfire.baseutil.PostConstruct;
+import cc.jfire.baseutil.Resource;
+import cc.jfire.baseutil.reflect.ReflectUtil;
+import cc.jfire.dson.Dson;
+import cc.jfire.jfire.core.ApplicationContext;
+import cc.jfire.boot.http.HttpRequestExtend;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 public class OpenApiForward
 {
     @Resource
-    private       ApplicationContext                  applicationContext;
-    private       Map<String, ServiceRequest>         serviceMap;
+    private ApplicationContext          applicationContext;
+    private Map<String, ServiceRequest> serviceMap;
     private final Function<HttpRequestExtend, String> dataExtracter;
 
     public OpenApiForward(Function<HttpRequestExtend, String> dataExtracter) {this.dataExtracter = dataExtracter;}

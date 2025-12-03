@@ -1,4 +1,4 @@
-import com.jfirer.jfirer.boot.forward.path.RestfulMatch;
+import cc.jfire.boot.forward.path.RestfulMatch;
 import org.junit.Assert;
 import org.junit.Test;
 

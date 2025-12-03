@@ -1,6 +1,6 @@
-package com.jfirer.jfirer.boot.http;
+package cc.jfire.boot.http;
 
-import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
+import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
 import lombok.Data;
 import lombok.experimental.Accessors;
 

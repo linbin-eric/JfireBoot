@@ -1,11 +1,15 @@
-package com.jfirer.jfirer.boot.common;
+package cc.jfire.boot.forward.path;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.METHOD)
+/**
+ * 该注解表明该请求处理的是一个multipart/form-data请求
+ */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface TraceId
-{}
+@Target(ElementType.METHOD)
+public @interface MultiPartPost
+{
+}

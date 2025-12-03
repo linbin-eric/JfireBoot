@@ -1,6 +1,6 @@
-package com.jfirer.jfirer.boot.forward.path;
+package cc.jfire.boot.forward.path;
 
-import com.jfirer.baseutil.StringUtil;
+import cc.jfire.baseutil.StringUtil;
 import lombok.Data;
 import lombok.ToString;
 

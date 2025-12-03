@@ -4,15 +4,32 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.jfirer</groupId>
+    <groupId>cc.jfire</groupId>
     <artifactId>JfireBoot</artifactId>
-    <version>1.2-SNAPSHOT</version>
-
+    <version>1.0</version>
+    <url>https://github.com/linbin-eric/JfireBoot</url>
+    <description>基于 Jfire 体系的快速 Boot 应用。引入 Boot，可以快速的构建一个Web Java 应用。</description>
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    <name>JfireBoot</name>
+    <scm>
+        <url>https://github.com/linbin-eric/JfireBoot</url>
+    </scm>
+    <developers>
+        <developer>
+            <name>jfirer</name>
+            <email>495561397@qq.com</email>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+        </license>
+    </licenses>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -21,19 +38,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.jfirer</groupId>
-            <artifactId>dson</artifactId>
-            <version>1.3-SNAPSHOT</version>
+            <groupId>cc.jfire</groupId>
+            <artifactId>Dson</artifactId>
+            <version>1.0</version>
         </dependency>
         <dependency>
-            <groupId>com.jfirer</groupId>
-            <artifactId>jnet</artifactId>
-            <version>1.0.2-SNAPSHOT</version>
+            <groupId>cc.jfire</groupId>
+            <artifactId>Jnet</artifactId>
+            <version>1.0</version>
         </dependency>
         <dependency>
-            <groupId>com.jfirer</groupId>
+            <groupId>cc.jfire</groupId>
             <artifactId>jfire-jsql-starter</artifactId>
-            <version>1.1-SNAPSHOT</version>
+            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -79,6 +96,48 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.4</version>   <!-- 2025年最新版 -->
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <gpgArguments>
+                        <arg>--pinentry-mode</arg>
+                        <arg>loopback</arg>
+                    </gpgArguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>

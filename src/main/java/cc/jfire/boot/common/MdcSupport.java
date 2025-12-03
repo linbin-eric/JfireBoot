@@ -1,10 +1,10 @@
-package com.jfirer.jfirer.boot.common;
+package cc.jfire.boot.common;
 
-import com.jfirer.baseutil.TRACEID;
-import com.jfirer.jfire.core.aop.ProceedPoint;
-import com.jfirer.jfire.core.aop.notated.After;
-import com.jfirer.jfire.core.aop.notated.Before;
-import com.jfirer.jfire.core.aop.notated.EnhanceClass;
+import cc.jfire.baseutil.TRACEID;
+import cc.jfire.jfire.core.aop.ProceedPoint;
+import cc.jfire.jfire.core.aop.notated.After;
+import cc.jfire.jfire.core.aop.notated.Before;
+import cc.jfire.jfire.core.aop.notated.EnhanceClass;
 import org.slf4j.MDC;
 
 @EnhanceClass("com.jfirer.jfirer.boot.http.*")

@@ -1,4 +1,4 @@
-package com.jfirer.jfirer.boot.forward.path;
+package cc.jfire.boot.forward.path;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

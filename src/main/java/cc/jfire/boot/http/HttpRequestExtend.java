@@ -1,11 +1,11 @@
-package com.jfirer.jfirer.boot.http;
+package cc.jfire.boot.http;
 
-import com.jfirer.dson.Dson;
-import com.jfirer.jnet.common.api.Pipeline;
-import com.jfirer.jnet.common.buffer.buffer.IoBuffer;
-import com.jfirer.jnet.common.util.HttpDecodeUtil;
-import com.jfirer.jnet.extend.http.coder.ContentType;
-import com.jfirer.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.dson.Dson;
+import cc.jfire.jnet.common.api.Pipeline;
+import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
+import cc.jfire.jnet.common.util.HttpDecodeUtil;
+import cc.jfire.jnet.extend.http.coder.ContentType;
+import cc.jfire.jnet.extend.http.dto.HttpRequest;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -18,12 +18,12 @@ import java.util.*;
 @Getter
 public class HttpRequestExtend extends HttpRequest
 {
-    private             String              utf8StrBody;
-    private             Map<String, Object> paramMap;
-    private             String              path;
+    private   String              utf8StrBody;
+    private   Map<String, Object> paramMap;
+    private   String              path;
     @Setter
-    private             Pipeline            pipeline;
-    protected           List<BoundaryPart>  parts       = DUMMY_PARTS;
+    private   Pipeline            pipeline;
+    protected List<BoundaryPart>  parts       = DUMMY_PARTS;
     public static final List<BoundaryPart>  DUMMY_PARTS = new LinkedList<>();
 
     public static HttpRequestExtend from(HttpRequest request, Pipeline pipeline)
