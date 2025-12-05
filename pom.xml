@@ -6,7 +6,7 @@
 
     <groupId>cc.jfire</groupId>
     <artifactId>JfireBoot</artifactId>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <url>https://github.com/linbin-eric/JfireBoot</url>
     <description>基于 Jfire 体系的快速 Boot 应用。引入 Boot，可以快速的构建一个Web Java 应用。</description>
     <properties>
@@ -40,7 +40,7 @@
         <dependency>
             <groupId>cc.jfire</groupId>
             <artifactId>Dson</artifactId>
-            <version>1.0</version>
+            <version>1.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>cc.jfire</groupId>
@@ -98,15 +98,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.9.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.6.3</version>
@@ -141,4 +132,28 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <!-- 正式发布到中央仓库：需要 -Drelease 参数 -->
+        <profile>
+            <id>release</id>
+            <activation>
+                <property>
+                    <name>release</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.9.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

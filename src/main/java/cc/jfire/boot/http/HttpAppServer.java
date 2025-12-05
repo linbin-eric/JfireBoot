@@ -44,7 +44,7 @@ public class HttpAppServer
             {
                 notFoundBarrier = new NotFoundUrlProcessor.NotFoundBarrier();
                 pipeline.addReadProcessor(notFoundBarrier);
-                pipeline.addReadProcessor(new ResourceProcessor(webDir, RuntimeJVM.detectRunningInJar()));
+                pipeline.addReadProcessor(new ResourceProcessor(webDir, RuntimeJVM.detectRunningInJar()==false));
             }
             if (param.getBeforeProcessor() != null)
             {
