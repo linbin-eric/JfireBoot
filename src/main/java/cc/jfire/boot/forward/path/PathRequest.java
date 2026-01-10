@@ -7,9 +7,8 @@ import cc.jfire.baseutil.reflect.ReflectUtil;
 import cc.jfire.baseutil.reflect.valueaccessor.ValueAccessor;
 import cc.jfire.dson.Dson;
 import cc.jfire.jnet.common.api.Pipeline;
-import cc.jfire.jnet.extend.http.dto.HttpRequest;
 import cc.jfire.boot.forward.openapi.JsonAttribute;
-import cc.jfire.boot.http.BinaryPart;
+import cc.jfire.boot.http.FilePart;
 import cc.jfire.boot.http.HttpRequestExtend;
 import lombok.Data;
 
@@ -83,7 +82,7 @@ public class PathRequest
                 case ReflectUtil.CLASS_STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? value : String.valueOf(value));
                 case ReflectUtil.CLASS_OBJECT ->
                 {
-                    if (parameterTypes[i] == HttpRequestExtend.class || parameterTypes[i] == HttpRequest.class)
+                    if (parameterTypes[i] == HttpRequestExtend.class)
                     {
                         paramValueGenerators[i] = new HttpRequestParse();
                     }
@@ -96,9 +95,9 @@ public class PathRequest
                         Class parameterType = parameterTypes[i];
                         paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Enum.valueOf(parameterType, (String) value) : new IllegalArgumentException());
                     }
-                    else if (List.class.equals(parameterTypes[i]) && method.getGenericParameterTypes()[i] instanceof ParameterizedType && ((ParameterizedType) method.getGenericParameterTypes()[i]).getActualTypeArguments()[0] == BinaryPart.class)
+                    else if (List.class.equals(parameterTypes[i]) && method.getGenericParameterTypes()[i] instanceof ParameterizedType && ((ParameterizedType) method.getGenericParameterTypes()[i]).getActualTypeArguments()[0] == FilePart.class)
                     {
-                        paramValueGenerators[i] = new BinaryPartParse();
+                        paramValueGenerators[i] = new FilePartParse();
                     }
                     else
                     {
@@ -130,7 +129,6 @@ public class PathRequest
         {
             case JsonPost ->
             {
-                requestExtend.parseUtf8Value();
                 if (needDeserializateJsonToParamMap && requestExtend.getUtf8StrBody() != null)
                 {
                     requestExtend.parseJsonBodyToParamMap();
@@ -142,7 +140,7 @@ public class PathRequest
             }
             case MultiPost ->
             {
-                requestExtend.parseMultiPartToParamMap();
+                // multipart 已在 HttpRequestExtend.from() 中解析完成，无需额外操作
             }
         }
         return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
@@ -227,25 +225,12 @@ public class PathRequest
         }
     }
 
-    class BinaryPartParse implements Function<HttpRequestExtend, Object>
+    class FilePartParse implements Function<HttpRequestExtend, Object>
     {
         @Override
         public Object apply(HttpRequestExtend httpRequestExtend)
         {
-            return httpRequestExtend.getParamMap().values().stream()//
-                                    .filter(o -> {
-                                        if (o instanceof HttpRequestExtend.BoundaryPart part)
-                                        {
-                                            return part.isBinary();
-                                        }
-                                        else
-                                        {
-                                            return false;
-                                        }
-                                    })//
-                                    .map(p -> new BinaryPart().setData(((HttpRequestExtend.BoundaryPart) p).getData()).setFileName(((HttpRequestExtend.BoundaryPart) p).getFileName())//
-                                                              .setFieldName(((HttpRequestExtend.BoundaryPart) p).getFieldName())//
-                                    ).toList();
+            return httpRequestExtend.getFileParts();
         }
     }
 

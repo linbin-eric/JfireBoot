@@ -1,18 +1,20 @@
 import cc.jfire.baseutil.Resource;
+import cc.jfire.baseutil.RuntimeJVM;
+import cc.jfire.boot.forward.path.Path;
+import cc.jfire.boot.http.HttpAppServer;
 import cc.jfire.jfire.core.ApplicationContext;
 import cc.jfire.jfire.core.AwareContextInited;
 import cc.jfire.jfire.core.prepare.annotation.EnableAutoConfiguration;
 import cc.jfire.jfire.core.prepare.annotation.configuration.Configuration;
 import cc.jfire.jnet.common.api.Pipeline;
-import cc.jfire.jnet.extend.http.dto.HttpRespBody;
-import cc.jfire.jnet.extend.http.dto.HttpRespHead;
-import cc.jfire.boot.forward.path.Path;
-import cc.jfire.boot.http.HttpAppServer;
+import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
+import cc.jfire.jnet.extend.http.dto.HttpResponsePartHead;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.locks.LockSupport;
 
 @EnableAutoConfiguration
@@ -26,7 +28,8 @@ public class SSETest implements AwareContextInited
     public void sse(Pipeline pipeline)
     {
         Thread.startVirtualThread(() -> {
-            HttpRespHead httpRespHead = new HttpRespHead().addHeader("Content-Type", "text/event-stream");
+            HttpResponsePartHead httpRespHead = new HttpResponsePartHead();
+            httpRespHead.addHeader("Content-Type", "text/event-stream");
             httpRespHead.addHeader("Cache-Control", "no-cache");
             httpRespHead.addHeader("Connection", "keep-alive");
             pipeline.fireWrite(httpRespHead);
@@ -49,18 +52,19 @@ public class SSETest implements AwareContextInited
                 else
                 {
                     System.out.println("输出:" + s);
-                    HttpRespBody body = new HttpRespBody();
-                    body.setBodyText("data:" + s + "\n\n");
-                    pipeline.fireWrite(body);
+                    IoBuffer allocate = pipeline.allocator().allocate(100);
+                    allocate.put(("data:" + s + "\n\n").getBytes(StandardCharsets.UTF_8));
+                    pipeline.fireWrite(allocate);
                 }
             }
         });
     }
 
-    @Test
-    @Ignore
-    public void test()
+//    @Test
+//    @Ignore
+    public static void main(String[] args)
     {
+        RuntimeJVM.registerMainClass();
         ApplicationContext boot = ApplicationContext.boot(SSETest.class);
         boot.getBean(SSETest.class);
         LockSupport.park();

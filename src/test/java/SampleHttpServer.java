@@ -2,8 +2,8 @@ import cc.jfire.jnet.common.api.ReadProcessor;
 import cc.jfire.jnet.common.api.ReadProcessorNode;
 import cc.jfire.jnet.common.util.ChannelConfig;
 import cc.jfire.jnet.extend.http.coder.*;
-import cc.jfire.jnet.extend.http.dto.FullHttpResp;
 import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.jnet.extend.http.dto.HttpResponse;
 import cc.jfire.jnet.server.AioServer;
 import cc.jfire.boot.http.DataJsonToRespEncoder;
 import lombok.SneakyThrows;
@@ -54,7 +54,8 @@ public class SampleHttpServer
                 throw new RuntimeException(e);
             }
             pipeline.addReadProcessor(sslRequestDecoder);
-            pipeline.addReadProcessor(new HttpRequestDecoder());
+            pipeline.addReadProcessor(new HttpRequestPartDecoder());
+            pipeline.addReadProcessor(new HttpRequestAggregator());
             pipeline.addReadProcessor(new OptionsProcessor());
             pipeline.addReadProcessor(new ReadProcessor<HttpRequest>()
             {
@@ -62,9 +63,9 @@ public class SampleHttpServer
                 public void read(HttpRequest data, ReadProcessorNode next)
                 {
                     data.close();
-                    FullHttpResp resp = new FullHttpResp();
+                    HttpResponse resp = new HttpResponse();
                     resp.getHead().addHeader("content-type", "text/html");
-                    resp.getBody().setBodyText("hello y");
+                    resp.setBodyText("hello y");
                     next.pipeline().fireWrite(resp);
                 }
             });

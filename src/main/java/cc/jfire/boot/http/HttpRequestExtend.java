@@ -3,11 +3,8 @@ package cc.jfire.boot.http;
 import cc.jfire.dson.Dson;
 import cc.jfire.jnet.common.api.Pipeline;
 import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
-import cc.jfire.jnet.common.util.HttpDecodeUtil;
-import cc.jfire.jnet.extend.http.coder.ContentType;
+import cc.jfire.jnet.common.util.HttpCoderUtil;
 import cc.jfire.jnet.extend.http.dto.HttpRequest;
-import lombok.AccessLevel;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,15 +13,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Getter
-public class HttpRequestExtend extends HttpRequest
+public class HttpRequestExtend implements AutoCloseable
 {
-    private   String              utf8StrBody;
-    private   Map<String, Object> paramMap;
-    private   String              path;
+    // 从 HttpRequest 复制的关键属性
+    private             String              method;
+    private             String              url;
+    private             String              version;
+    private             Map<String, String> headers;
+    private             long                contentLength;
+    private             String              contentType;
+    // 解析后的属性
+    private             String              utf8StrBody;
+    private             Map<String, Object> paramMap;
+    private             String              path;
     @Setter
-    private   Pipeline            pipeline;
-    protected List<BoundaryPart>  parts       = DUMMY_PARTS;
-    public static final List<BoundaryPart>  DUMMY_PARTS = new LinkedList<>();
+    private             Pipeline            pipeline;
+    protected           List<FilePart>      fileParts        = DUMMY_FILE_PARTS;
+    public static final List<FilePart>      DUMMY_FILE_PARTS = new LinkedList<>();
 
     public static HttpRequestExtend from(HttpRequest request, Pipeline pipeline)
     {
@@ -32,25 +37,41 @@ public class HttpRequestExtend extends HttpRequest
         {
             return null;
         }
-        HttpRequestExtend httpRequestExtend = new HttpRequestExtend();
-        httpRequestExtend.setMethod(request.getMethod());
-        httpRequestExtend.setPipeline(pipeline);
-        httpRequestExtend.setUrl(request.getUrl());
-        httpRequestExtend.setVersion(request.getVersion());
-        httpRequestExtend.setHeaders(request.getHeaders());
-        httpRequestExtend.setContentLength(request.getContentLength());
-        httpRequestExtend.setContentType(request.getContentType());
-        httpRequestExtend.setBody(request.getBody());
-        httpRequestExtend.setWholeRequest(request.getWholeRequest());
-        httpRequestExtend.parsePath();
-        return httpRequestExtend;
+        HttpRequestExtend extend = new HttpRequestExtend();
+        extend.pipeline = pipeline;
+        // 复制关键属性
+        extend.method        = request.getHead().getMethod();
+        extend.url           = request.getHead().getPath();
+        extend.version       = request.getHead().getVersion();
+        extend.headers       = request.getHead().getHeaders();
+        extend.contentLength = request.getHead().getContentLength();
+        extend.contentType   = extend.headers != null ? extend.headers.get("Content-Type") : null;
+        // 解析 path 和 URL 参数
+        extend.parsePath();
+        // 根据 Content-Type 解析 body
+        IoBuffer body = request.getBody();
+        if (body != null && body.remainRead() > 0)
+        {
+            if (extend.contentType != null && extend.contentType.toLowerCase().startsWith("multipart/form-data"))
+            {
+                extend.parseMultiPart(body);
+            }
+            else
+            {
+                // application/json 或其他类型，解析为 utf8 字符串
+                extend.utf8StrBody = StandardCharsets.UTF_8.decode(body.readableByteBuffer()).toString();
+                body.free();
+            }
+        }
+        // 释放 HttpRequest（head 部分）
+        request.getHead().close();
+        return extend;
     }
 
     @Override
     public void close()
     {
-        super.close();
-        parts.forEach(part -> part.close());
+        fileParts.forEach(FilePart::close);
     }
 
     public Map<String, Object> getNotNullParamMap()
@@ -62,7 +83,7 @@ public class HttpRequestExtend extends HttpRequest
         return paramMap;
     }
 
-    public void parsePath()
+    private void parsePath()
     {
         int index = url.indexOf("?");
         if (index == -1)
@@ -71,8 +92,7 @@ public class HttpRequestExtend extends HttpRequest
         }
         else
         {
-            path = url.substring(0, index);
-            //因为在这个时候，paramMap 是一定不存在的。
+            path     = url.substring(0, index);
             paramMap = new HashMap<>();
             Arrays.stream(url.substring(index + 1).split("&")).forEach(v -> {
                 int paramValueIndex = v.indexOf("=");
@@ -88,152 +108,100 @@ public class HttpRequestExtend extends HttpRequest
         }
     }
 
-    public void parseUtf8Value()
-    {
-        if (utf8StrBody == null && body != null)
-        {
-            utf8StrBody = StandardCharsets.UTF_8.decode(body.readableByteBuffer()).toString();
-            body.free();
-            body = null;
-        }
-    }
-
     public void parseJsonBodyToParamMap()
     {
         if (paramMap == null)
         {
             paramMap = new HashMap<>();
         }
-        Object o = Dson.fromString(utf8StrBody);
-        if (o instanceof Map map)
+        if (utf8StrBody != null)
         {
-            paramMap.putAll(map);
+            Object o = Dson.fromString(utf8StrBody);
+            if (o instanceof Map map)
+            {
+                paramMap.putAll(map);
+            }
         }
     }
 
-    public void parseMultiPartToParamMap()
+    private void parseMultiPart(IoBuffer body)
     {
+        byte[] boundary      = ("--" + contentType.substring(contentType.indexOf("boundary=") + 9)).getBytes(StandardCharsets.US_ASCII);
+        int    boundaryIndex = body.indexOf(boundary);
+        if (boundaryIndex != body.getReadPosi())
+        {
+            throw new IllegalArgumentException("Invalid multipart data: boundary not found at expected position");
+        }
+        body.addReadPosi(boundary.length + 2);
+        fileParts = new ArrayList<>();
         if (paramMap == null)
         {
             paramMap = new HashMap<>();
         }
-        parseMaybeMultiParts();
-        for (BoundaryPart part : parts)
+        while (true)
         {
-            if (part.isBinary())
+            boundaryIndex = body.indexOf(boundary);
+            if (boundaryIndex != -1)
             {
-                paramMap.put(part.getFieldName(), part);
+                // 数据范围需要将回车换行去掉
+                IoBuffer slice = body.slice(boundaryIndex - body.getReadPosi() - 2);
+                parseBoundaryPart(slice);
+                body.addReadPosi(2 + boundary.length + 2);
             }
             else
             {
-                paramMap.put(part.getFieldName(), part.getUtf8Value());
+                break;
             }
         }
+        body.free();
     }
 
-    private void parseMaybeMultiParts()
+    private void parseBoundaryPart(IoBuffer slice)
     {
-        if (contentType != null && contentType.toLowerCase().startsWith("multipart/form-data"))
+        // 解析 headers
+        Map<String, String> partHeaders = new HashMap<>();
+        HttpCoderUtil.findAllHeaders(slice, partHeaders::put);
+        // 解析 Content-Type
+        String partContentType = partHeaders.get("Content-Type");
+        if (partContentType == null)
         {
-            byte[] boundary      = ("--" + contentType.substring(contentType.indexOf("boundary=") + 9)).getBytes(StandardCharsets.US_ASCII);
-            int[]  prefix        = HttpDecodeUtil.computePrefix(boundary);
-            int    boundaryIndex = HttpDecodeUtil.findSubArray(body, boundary, prefix);
-            if (boundaryIndex != body.getReadPosi())
-            {
-                throw new IllegalArgumentException();
-            }
-            body.addReadPosi(boundary.length + 2);
-            parts = new ArrayList<>();
-            while (true)
-            {
-                boundaryIndex = HttpDecodeUtil.findSubArray(body, boundary, prefix);
-                if (boundaryIndex != -1)
-                {
-                    //数据范围需要将回车换行去掉
-                    IoBuffer slice = body.slice(boundaryIndex - body.getReadPosi() - 2);
-                    parts.add(new BoundaryPart(slice));
-                    body.addReadPosi(2 + boundary.length + 2);
-                }
-                else
-                {
-                    break;
-                }
-            }
-            body.free();
-            body = null;
+            partContentType = "text/plain";
         }
-    }
-
-    @Data
-    public static class BoundaryPart
-    {
-        @Setter(AccessLevel.NONE)
-        private Map<String, String> headers = new HashMap<>();
-        private String              contentType;
-        private String              fileName;
-        private String              fieldName;
-        private IoBuffer            data;
-        private boolean             binary  = false;
-        private String              utf8Value;
-
-        public BoundaryPart(IoBuffer slice)
+        // 解析 Content-Disposition
+        String disposition = partHeaders.get("Content-Disposition");
+        String fieldName   = null;
+        String fileName    = null;
+        int    indexOfName = disposition.indexOf("name=");
+        int    endOfIndex  = disposition.indexOf('"', indexOfName + 6);
+        fieldName = disposition.substring(indexOfName + 6, endOfIndex);
+        int index = disposition.indexOf("filename=");
+        if (index != -1)
         {
-            HttpDecodeUtil.findAllHeaders(slice, this::putHeader);
-            this.data = slice;
-            analysisHeaders();
-            mayBeUtf8Value();
+            fileName = disposition.substring(index + 10, disposition.indexOf('"', index + 11));
         }
-
-        public void putHeader(String header, String value)
+        if ((index = disposition.indexOf("filename*=UTF-8''")) != -1)
         {
-            headers.put(header, value);
+            fileName = URLDecoder.decode(disposition.substring(index + 17), StandardCharsets.UTF_8);
         }
-
-        public void close()
+        // 根据规则决定处理方式：
+        // - 有 filename/filename* 或 Content-Type 为 application/octet-stream：按文件/二进制处理
+        // - 否则：按 UTF-8 文本字段处理
+        boolean fileLike = fileName != null || "application/octet-stream".equalsIgnoreCase(partContentType);
+        if (fileLike)
         {
-            if (data != null)
-            {
-                data.free();
-                data = null;
-            }
+            // 文件：添加到 fileParts
+            FilePart filePart = new FilePart();
+            filePart.setFileName(fileName);
+            filePart.setFieldName(fieldName);
+            filePart.setIoBuffer(slice);
+            fileParts.add(filePart);
         }
-
-        private void mayBeUtf8Value()
+        else
         {
-            if (!binary)
-            {
-                utf8Value = StandardCharsets.UTF_8.decode(data.readableByteBuffer()).toString();
-                data.free();
-                data = null;
-            }
-        }
-
-        private void analysisHeaders()
-        {
-            HttpDecodeUtil.findContentType(headers, this::setContentType);
-            if (contentType == null)
-            {
-                contentType = "text/plain";
-            }
-            switch (contentType)
-            {
-                case "application/java-archive", "application/zip", ContentType.STREAM -> binary = true;
-            }
-            String value       = headers.get("Content-Disposition");
-            int    indexOfName = value.indexOf("name=");
-            int    endOfIndex  = value.indexOf('"', indexOfName + 6);
-            fieldName = value.substring(indexOfName + 6, endOfIndex);
-            int index = value.indexOf("filename=");
-            if (index != -1)
-            {
-                fileName = value.substring(index + 10, value.indexOf('"', index + 11));
-                binary   = true;
-            }
-            if ((index = value.indexOf("filename*=UTF-8''")) != -1)
-            {
-                fileName = URLDecoder.decode(value.substring(index + 17), StandardCharsets.UTF_8);
-                binary   = true;
-            }
+            // 普通文本字段：解析为字符串存入 paramMap
+            String value = StandardCharsets.UTF_8.decode(slice.readableByteBuffer()).toString();
+            slice.free();
+            paramMap.put(fieldName, value);
         }
     }
 }

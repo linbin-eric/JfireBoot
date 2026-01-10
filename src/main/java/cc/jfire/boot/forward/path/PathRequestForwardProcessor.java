@@ -2,7 +2,7 @@ package cc.jfire.boot.forward.path;
 
 import cc.jfire.jnet.common.api.ReadProcessor;
 import cc.jfire.jnet.common.api.ReadProcessorNode;
-import cc.jfire.jnet.extend.http.dto.FullHttpResp;
+import cc.jfire.jnet.extend.http.dto.HttpResponse;
 import cc.jfire.jnet.extend.http.dto.HttpRequest;
 import cc.jfire.boot.common.TraceId;
 import cc.jfire.boot.http.HttpRequestExtend;
@@ -60,8 +60,8 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
         catch (Throwable e)
         {
             log.error("请求出现异常,当前请求路径:{}", path, e);
-            FullHttpResp response = new FullHttpResp();
-            response.getBody().setBodyText("error:" + e.toString());
+            HttpResponse response = new HttpResponse();
+            response.setBodyText("error:" + e.toString());
             next.pipeline().fireWrite(response);
         }
     }

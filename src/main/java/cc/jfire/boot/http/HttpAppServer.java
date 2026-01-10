@@ -36,7 +36,8 @@ public class HttpAppServer
         ChannelConfig            channelConfig = param.getChannelConfig();
         Map<String, PathRequest> requestMap    = parseFromApplication(param.getContext());
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
-            pipeline.addReadProcessor(new HttpRequestDecoder());
+            pipeline.addReadProcessor(new HttpRequestPartDecoder());
+            pipeline.addReadProcessor(new HttpRequestAggregator());
             pipeline.addReadProcessor(new OptionsProcessor());
             String                               webDir          = param.getWebDir();
             NotFoundUrlProcessor.NotFoundBarrier notFoundBarrier = null;
