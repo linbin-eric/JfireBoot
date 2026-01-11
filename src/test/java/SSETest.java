@@ -11,8 +11,6 @@ import cc.jfire.jnet.common.buffer.buffer.IoBuffer;
 import cc.jfire.jnet.extend.http.dto.HttpResponsePartHead;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.locks.LockSupport;
@@ -29,6 +27,9 @@ public class SSETest implements AwareContextInited
     {
         Thread.startVirtualThread(() -> {
             HttpResponsePartHead httpRespHead = new HttpResponsePartHead();
+            httpRespHead.setVersion("HTTP/1.1");
+            httpRespHead.setStatusCode(200);
+            httpRespHead.setReasonPhrase("OK");
             httpRespHead.addHeader("Content-Type", "text/event-stream");
             httpRespHead.addHeader("Cache-Control", "no-cache");
             httpRespHead.addHeader("Connection", "keep-alive");
@@ -60,7 +61,7 @@ public class SSETest implements AwareContextInited
         });
     }
 
-//    @Test
+    //    @Test
 //    @Ignore
     public static void main(String[] args)
     {
