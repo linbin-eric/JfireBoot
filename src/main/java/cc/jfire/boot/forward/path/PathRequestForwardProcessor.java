@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 
 @Slf4j
-public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
+public class PathRequestForwardProcessor implements ReadProcessor<Object>
 {
     private Map<String, PathRequest> requestMap;
     private PathRequest[]            restfulRequests;
@@ -24,7 +24,19 @@ public class PathRequestForwardProcessor implements ReadProcessor<HttpRequest>
 
     @TraceId
     @Override
-    public void read(HttpRequest data, ReadProcessorNode next)
+    public void read(Object data, ReadProcessorNode next)
+    {
+        if (data instanceof HttpRequest httpRequest)
+        {
+            handleHttpRequest(httpRequest, next);
+        }
+        else
+        {
+            next.fireRead(data);
+        }
+    }
+
+    private void handleHttpRequest(HttpRequest data, ReadProcessorNode next)
     {
         String path = "";
         try (HttpRequestExtend requestExtend = HttpRequestExtend.from(data, next.pipeline()))

@@ -7,6 +7,10 @@ import cc.jfire.jnet.common.api.ReadProcessor;
 import cc.jfire.jnet.common.util.ChannelConfig;
 import cc.jfire.jnet.extend.http.coder.*;
 import cc.jfire.jnet.extend.http.dto.HttpRequest;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameDecoder;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameEncoder;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketUpgradeDecoder;
+import cc.jfire.jnet.extend.websocket.dto.WebSocketFrame;
 import cc.jfire.jnet.server.AioServer;
 import cc.jfire.boot.forward.path.Path;
 import cc.jfire.boot.forward.path.PathRequest;
@@ -25,10 +29,11 @@ public class HttpAppServer
     @Accessors(chain = true)
     public static class StartParam
     {
-        private ChannelConfig      channelConfig;
-        private ApplicationContext context;
-        private String             webDir;
-        private ReadProcessor<HttpRequest>[] beforeProcessor;
+        private ChannelConfig                 channelConfig;
+        private ApplicationContext            context;
+        private String                        webDir;
+        private ReadProcessor<HttpRequest>[]  beforeProcessor;
+        private ReadProcessor<WebSocketFrame> webSocketProcessor;
     }
 
     public static AioServer start(StartParam param)
@@ -36,8 +41,14 @@ public class HttpAppServer
         ChannelConfig            channelConfig = param.getChannelConfig();
         Map<String, PathRequest> requestMap    = parseFromApplication(param.getContext());
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
-            pipeline.addReadProcessor(new HttpRequestPartDecoder());
+            // 替换 HttpRequestPartDecoder 为 WebSocketUpgradeDecoder，支持 WebSocket 升级
+            pipeline.addReadProcessor(new WebSocketUpgradeDecoder());
             pipeline.addReadProcessor(new HttpRequestAggregator());
+            // 添加 WebSocketFrameDecoder（仅当配置了 WebSocket 处理器时）
+            if (param.getWebSocketProcessor() != null)
+            {
+                pipeline.addReadProcessor(new WebSocketFrameDecoder(true));
+            }
             pipeline.addReadProcessor(new OptionsProcessor());
             String                               webDir          = param.getWebDir();
             NotFoundUrlProcessor.NotFoundBarrier notFoundBarrier = null;
@@ -45,7 +56,7 @@ public class HttpAppServer
             {
                 notFoundBarrier = new NotFoundUrlProcessor.NotFoundBarrier();
                 pipeline.addReadProcessor(notFoundBarrier);
-                pipeline.addReadProcessor(new ResourceProcessor(webDir, RuntimeJVM.detectRunningInJar()==false));
+                pipeline.addReadProcessor(new ResourceProcessor(webDir, RuntimeJVM.detectRunningInJar() == false));
             }
             if (param.getBeforeProcessor() != null)
             {
@@ -54,12 +65,22 @@ public class HttpAppServer
                     pipeline.addReadProcessor(processor);
                 }
             }
+            // 添加用户自定义的 WebSocket 处理器
+            if (param.getWebSocketProcessor() != null)
+            {
+                pipeline.addReadProcessor(param.getWebSocketProcessor());
+            }
             pipeline.addReadProcessor(new PathRequestForwardProcessor(requestMap));
             if (StringUtil.isNotBlank(webDir))
             {
                 pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));
             }
             pipeline.addWriteProcessor(new DataJsonToRespEncoder());
+            // 添加 WebSocketFrameEncoder（仅当配置了 WebSocket 处理器时）
+            if (param.getWebSocketProcessor() != null)
+            {
+                pipeline.addWriteProcessor(new WebSocketFrameEncoder(pipeline.allocator(), false));
+            }
             pipeline.addWriteProcessor(new HttpRespEncoder(pipeline.allocator()));
         });
         aioServer.start();
@@ -84,6 +105,11 @@ public class HttpAppServer
         return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
                                      .setWebDir(webDir)//
                                      .setBeforeProcessor(before));
+    }
+
+    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<HttpRequest>[] beforeProcessors, ReadProcessor<WebSocketFrame> webSocketProcessor)
+    {
+        return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP)).setWebDir(webDir).setBeforeProcessor(beforeProcessors).setWebSocketProcessor(webSocketProcessor));
     }
 
     private static Map<String, PathRequest> parseFromApplication(ApplicationContext context)

@@ -10,42 +10,56 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
-public class NotFoundUrlProcessor implements ReadProcessor<HttpRequestExtend>
+public class NotFoundUrlProcessor implements ReadProcessor<Object>
 {
     private final NotFoundBarrier barrier;
 
     @Override
-    public void read(HttpRequestExtend data, ReadProcessorNode next)
+    public void read(Object data, ReadProcessorNode next)
     {
-        String purePath = data.getPath();
-        barrier.notAvailablePaths.add(purePath);
-        HttpResponse response = new HttpResponse();
-        response.getHead().setStatusCode(404);
-        response.getHead().setReasonPhrase("Not Found");
-        response.setBodyText("notAvailable path:" + purePath);
-        data.getPipeline().fireWrite(response);
+        if (data instanceof HttpRequestExtend requestExtend)
+        {
+            String purePath = requestExtend.getPath();
+            barrier.notAvailablePaths.add(purePath);
+            HttpResponse response = new HttpResponse();
+            response.getHead().setStatusCode(404);
+            response.getHead().setReasonPhrase("Not Found");
+            response.setBodyText("notAvailable path:" + purePath);
+            requestExtend.getPipeline().fireWrite(response);
+        }
+        else
+        {
+            next.fireRead(data);
+        }
     }
 
-    public static class NotFoundBarrier implements ReadProcessor<HttpRequest>
+    public static class NotFoundBarrier implements ReadProcessor<Object>
     {
         private Set<String> notAvailablePaths = new HashSet<>();
 
         @Override
-        public void read(HttpRequest request, ReadProcessorNode next)
+        public void read(Object data, ReadProcessorNode next)
         {
-            String purePath = parsePath(request.getHead().getPath());
-            if (notAvailablePaths.contains(purePath))
+            if (data instanceof HttpRequest request)
             {
-                HttpResponse response = new HttpResponse();
-                response.getHead().setStatusCode(404);
-                response.getHead().setReasonPhrase("Not Found");
-                response.setBodyText("notAvailable path:" + purePath);
-                request.close();
-                next.pipeline().fireWrite(response);
+                String purePath = parsePath(request.getHead().getPath());
+                if (notAvailablePaths.contains(purePath))
+                {
+                    HttpResponse response = new HttpResponse();
+                    response.getHead().setStatusCode(404);
+                    response.getHead().setReasonPhrase("Not Found");
+                    response.setBodyText("notAvailable path:" + purePath);
+                    request.close();
+                    next.pipeline().fireWrite(response);
+                }
+                else
+                {
+                    next.fireRead(request);
+                }
             }
             else
             {
-                next.fireRead(request);
+                next.fireRead(data);
             }
         }
 
