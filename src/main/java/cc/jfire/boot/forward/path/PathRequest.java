@@ -5,11 +5,11 @@ import cc.jfire.baseutil.bytecode.support.AnnotationContext;
 import cc.jfire.baseutil.bytecode.util.BytecodeUtil;
 import cc.jfire.baseutil.reflect.ReflectUtil;
 import cc.jfire.baseutil.reflect.valueaccessor.ValueAccessor;
-import cc.jfire.dson.Dson;
-import cc.jfire.jnet.common.api.Pipeline;
 import cc.jfire.boot.forward.openapi.JsonAttribute;
 import cc.jfire.boot.http.FilePart;
 import cc.jfire.boot.http.HttpRequestExtend;
+import cc.jfire.dson.Dson;
+import cc.jfire.jnet.common.api.Pipeline;
 import lombok.Data;
 
 import java.lang.annotation.Annotation;
@@ -34,17 +34,10 @@ public class PathRequest
     private Object                                host;
     private RestfulMatch                          restfulMatch;
     private boolean                               needDeserializateJsonToParamMap = false;
-    private RequestType                           requestType;
-
-    enum RequestType
-    {
-        JsonPost, UrlFormPost, MultiPost
-    }
 
     public PathRequest(Method method, Object host)
     {
         this.method = method;
-        requestType = method.isAnnotationPresent(UrlFormPost.class) ? RequestType.UrlFormPost : method.isAnnotationPresent(MultiPartPost.class) ? RequestType.MultiPost : RequestType.JsonPost;
         this.host   = host;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
@@ -110,12 +103,7 @@ public class PathRequest
                         }
                         else
                         {
-                            switch (requestType)
-                            {
-                                case JsonPost -> paramValueGenerators[i] = new JsonParse(method.getGenericParameterTypes()[i]);
-                                case UrlFormPost -> {}
-                                case MultiPost -> paramValueGenerators[i] = new FormObjectParse(parameterTypes[i]);
-                            }
+                            paramValueGenerators[i] = new UnifiedObjectParse(parameterTypes[i], method.getGenericParameterTypes()[i]);
                         }
                     }
                 }
@@ -125,24 +113,7 @@ public class PathRequest
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
-        switch (requestType)
-        {
-            case JsonPost ->
-            {
-                if (needDeserializateJsonToParamMap && requestExtend.getUtf8StrBody() != null)
-                {
-                    requestExtend.parseJsonBodyToParamMap();
-                }
-            }
-            case UrlFormPost ->
-            {
-                throw new UnsupportedOperationException("还没有支持application/x-www-form-urlencoded形式");
-            }
-            case MultiPost ->
-            {
-                // multipart 已在 HttpRequestExtend.from() 中解析完成，无需额外操作
-            }
-        }
+        requestExtend.ensureParamMapReady(needDeserializateJsonToParamMap);
         return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
     }
 
@@ -183,30 +154,6 @@ public class PathRequest
         }
     }
 
-    class JsonParse implements Function<HttpRequestExtend, Object>
-    {
-        private Type type;
-
-        public JsonParse(Type type)
-        {
-            this.type = type;
-        }
-
-        @Override
-        public Object apply(HttpRequestExtend requestExtend)
-        {
-            String utf8StrBody = requestExtend.getUtf8StrBody();
-            if (utf8StrBody != null)
-            {
-                return Dson.fromString(type, utf8StrBody);
-            }
-            else
-            {
-                return null;
-            }
-        }
-    }
-
     class AttributeParse implements Function<HttpRequestExtend, Object>
     {
         private Type   type;
@@ -225,23 +172,16 @@ public class PathRequest
         }
     }
 
-    class FilePartParse implements Function<HttpRequestExtend, Object>
-    {
-        @Override
-        public Object apply(HttpRequestExtend httpRequestExtend)
-        {
-            return httpRequestExtend.getFileParts();
-        }
-    }
-
-    class FormObjectParse implements Function<HttpRequestExtend, Object>
+    class UnifiedObjectParse implements Function<HttpRequestExtend, Object>
     {
         private Constructor                           constructor;
         private ValueAccessor[]                       valueAccessors;
         private Function<HttpRequestExtend, Object>[] valueGenerators;
+        private Type                                  type;
 
-        public FormObjectParse(Class ckass)
+        public UnifiedObjectParse(Class ckass, Type type)
         {
+            this.type = type;
             try
             {
                 constructor = ckass.getDeclaredConstructor();
@@ -266,20 +206,20 @@ public class PathRequest
                     switch (ReflectUtil.getClassId(field.getType()))
                     {
                         case ReflectUtil.CLASS_INT,
-                             ReflectUtil.PRIMITIVE_INT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_INT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_BOOL,
-                             ReflectUtil.PRIMITIVE_BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_BYTE,
-                             ReflectUtil.PRIMITIVE_BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_SHORT,
-                             ReflectUtil.PRIMITIVE_SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_LONG,
-                             ReflectUtil.PRIMITIVE_LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_FLOAT,
-                             ReflectUtil.PRIMITIVE_FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
                         case ReflectUtil.CLASS_DOUBLE,
-                             ReflectUtil.PRIMITIVE_DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value instanceof String ? value : new IllegalArgumentException()));
+                             ReflectUtil.PRIMITIVE_DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
+                        case ReflectUtil.CLASS_STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? value : String.valueOf(value)));
                         case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR, ReflectUtil.CLASS_OBJECT -> gen.add(new UnSupportValueType(field));
                         default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.getClassId(field.getType()));
                     }
@@ -293,6 +233,21 @@ public class PathRequest
         @Override
         public Object apply(HttpRequestExtend requestExtend)
         {
+            // 对于 application/json 且不需要解析到 paramMap 的情况，直接反序列化整个 JSON
+            String contentType = requestExtend.getContentType();
+            if (contentType != null && contentType.toLowerCase().startsWith("application/json") && !needDeserializateJsonToParamMap)
+            {
+                String utf8StrBody = requestExtend.getUtf8StrBody();
+                if (utf8StrBody != null)
+                {
+                    return Dson.fromString(type, utf8StrBody);
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            // 其他情况从 paramMap 中获取值填充对象
             try
             {
                 Object instance = constructor.newInstance();
@@ -306,6 +261,15 @@ public class PathRequest
             {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    class FilePartParse implements Function<HttpRequestExtend, Object>
+    {
+        @Override
+        public Object apply(HttpRequestExtend httpRequestExtend)
+        {
+            return httpRequestExtend.getFileParts();
         }
     }
 

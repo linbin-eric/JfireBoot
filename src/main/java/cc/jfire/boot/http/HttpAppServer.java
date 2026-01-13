@@ -2,19 +2,20 @@ package cc.jfire.boot.http;
 
 import cc.jfire.baseutil.RuntimeJVM;
 import cc.jfire.baseutil.StringUtil;
-import cc.jfire.jfire.core.ApplicationContext;
-import cc.jfire.jnet.common.api.ReadProcessor;
-import cc.jfire.jnet.common.util.ChannelConfig;
-import cc.jfire.jnet.extend.http.coder.*;
-import cc.jfire.jnet.extend.http.dto.HttpRequest;
-import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameDecoder;
-import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameEncoder;
-import cc.jfire.jnet.extend.websocket.coder.WebSocketUpgradeDecoder;
-import cc.jfire.jnet.extend.websocket.dto.WebSocketFrame;
-import cc.jfire.jnet.server.AioServer;
 import cc.jfire.boot.forward.path.Path;
 import cc.jfire.boot.forward.path.PathRequest;
 import cc.jfire.boot.forward.path.PathRequestForwardProcessor;
+import cc.jfire.jfire.core.ApplicationContext;
+import cc.jfire.jnet.common.api.ReadProcessor;
+import cc.jfire.jnet.common.util.ChannelConfig;
+import cc.jfire.jnet.extend.http.coder.HttpRequestAggregator;
+import cc.jfire.jnet.extend.http.coder.HttpRespEncoder;
+import cc.jfire.jnet.extend.http.coder.OptionsProcessor;
+import cc.jfire.jnet.extend.http.coder.ResourceProcessor;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameDecoder;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameEncoder;
+import cc.jfire.jnet.extend.websocket.coder.WebSocketUpgradeDecoder;
+import cc.jfire.jnet.server.AioServer;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -29,11 +30,11 @@ public class HttpAppServer
     @Accessors(chain = true)
     public static class StartParam
     {
-        private ChannelConfig                 channelConfig;
-        private ApplicationContext            context;
-        private String                        webDir;
-        private ReadProcessor<HttpRequest>[]  beforeProcessor;
-        private ReadProcessor<WebSocketFrame> webSocketProcessor;
+        private ChannelConfig           channelConfig;
+        private ApplicationContext      context;
+        private String                  webDir;
+        private ReadProcessor<Object>[] beforeProcessor;
+        private ReadProcessor<Object>   webSocketProcessor;
     }
 
     public static AioServer start(StartParam param)
@@ -60,7 +61,7 @@ public class HttpAppServer
             }
             if (param.getBeforeProcessor() != null)
             {
-                for (ReadProcessor<HttpRequest> processor : param.getBeforeProcessor())
+                for (ReadProcessor<Object> processor : param.getBeforeProcessor())
                 {
                     pipeline.addReadProcessor(processor);
                 }
@@ -93,21 +94,21 @@ public class HttpAppServer
                                      .setContext(context));
     }
 
-    public static AioServer start(int port, ApplicationContext context, ReadProcessor<HttpRequest>... before)
+    public static AioServer start(int port, ApplicationContext context, ReadProcessor<Object>... before)
     {
         return start(new StartParam().setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
                                      .setContext(context)//
                                      .setBeforeProcessor(before));
     }
 
-    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<HttpRequest>... before)
+    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<Object>... before)
     {
         return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP))//
                                      .setWebDir(webDir)//
                                      .setBeforeProcessor(before));
     }
 
-    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<HttpRequest>[] beforeProcessors, ReadProcessor<WebSocketFrame> webSocketProcessor)
+    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<Object>[] beforeProcessors, ReadProcessor<Object> webSocketProcessor)
     {
         return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP)).setWebDir(webDir).setBeforeProcessor(beforeProcessors).setWebSocketProcessor(webSocketProcessor));
     }

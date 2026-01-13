@@ -124,6 +124,54 @@ public class HttpRequestExtend implements AutoCloseable
         }
     }
 
+    public void parseUrlEncodedBodyToParamMap()
+    {
+        if (paramMap == null)
+        {
+            paramMap = new HashMap<>();
+        }
+        if (utf8StrBody != null)
+        {
+            Arrays.stream(utf8StrBody.split("&")).forEach(v -> {
+                int paramValueIndex = v.indexOf("=");
+                if (paramValueIndex == -1)
+                {
+                    paramMap.put(v, "");
+                }
+                else
+                {
+                    String key = URLDecoder.decode(v.substring(0, paramValueIndex), StandardCharsets.UTF_8);
+                    String value = URLDecoder.decode(v.substring(paramValueIndex + 1), StandardCharsets.UTF_8);
+                    paramMap.put(key, value);
+                }
+            });
+        }
+    }
+
+    public void ensureParamMapReady(boolean needDeserializateJsonToParamMap)
+    {
+        if (contentType == null)
+        {
+            return;
+        }
+        String lowerContentType = contentType.toLowerCase();
+        if (lowerContentType.startsWith("application/json"))
+        {
+            if (needDeserializateJsonToParamMap && utf8StrBody != null)
+            {
+                parseJsonBodyToParamMap();
+            }
+        }
+        else if (lowerContentType.startsWith("application/x-www-form-urlencoded"))
+        {
+            if (utf8StrBody != null)
+            {
+                parseUrlEncodedBodyToParamMap();
+            }
+        }
+        // multipart/form-data 已在 from() 中解析完成，无需额外操作
+    }
+
     private void parseMultiPart(IoBuffer body)
     {
         byte[] boundary      = ("--" + contentType.substring(contentType.indexOf("boundary=") + 9)).getBytes(StandardCharsets.US_ASCII);
