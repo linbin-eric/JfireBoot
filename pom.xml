@@ -50,7 +50,7 @@
         <dependency>
             <groupId>cc.jfire</groupId>
             <artifactId>jfire-jsql-starter</artifactId>
-            <version>1.0</version>
+            <version>1.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

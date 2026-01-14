@@ -73,6 +73,12 @@ public class PathRequest
                 case ReflectUtil.CLASS_DOUBLE,
                      ReflectUtil.PRIMITIVE_DOUBLE -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException());
                 case ReflectUtil.CLASS_STRING -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? value : String.valueOf(value));
+                case ReflectUtil.CLASS_BIGDECIMAL -> paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? new java.math.BigDecimal((String) value) : value instanceof Number ? new java.math.BigDecimal(value.toString()) : new IllegalArgumentException());
+                case ReflectUtil.CLASS_ENUM ->
+                {
+                    Class parameterType = parameterTypes[i];
+                    paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value == null ? null : value instanceof String ? Enum.valueOf(parameterType, (String) value) : value.getClass() == parameterType ? value : new IllegalArgumentException());
+                }
                 case ReflectUtil.CLASS_OBJECT ->
                 {
                     if (parameterTypes[i] == HttpRequestExtend.class)
@@ -82,11 +88,6 @@ public class PathRequest
                     else if (parameterTypes[i] == Pipeline.class)
                     {
                         paramValueGenerators[i] = new PipelineParse();
-                    }
-                    else if (Enum.class.isAssignableFrom(parameterTypes[i]))
-                    {
-                        Class parameterType = parameterTypes[i];
-                        paramValueGenerators[i] = new SimpleClassParse(paramNames[i], value -> value instanceof String ? Enum.valueOf(parameterType, (String) value) : new IllegalArgumentException());
                     }
                     else if (List.class.equals(parameterTypes[i]) && method.getGenericParameterTypes()[i] instanceof ParameterizedType && ((ParameterizedType) method.getGenericParameterTypes()[i]).getActualTypeArguments()[0] == FilePart.class)
                     {
@@ -182,52 +183,57 @@ public class PathRequest
         public UnifiedObjectParse(Class ckass, Type type)
         {
             this.type = type;
-            try
+            if (ckass.isInterface())
             {
-                constructor = ckass.getDeclaredConstructor();
             }
-            catch (NoSuchMethodException e)
-            {
-                ReflectUtil.throwException(e);
-            }
-            List<ValueAccessor>                       list = new LinkedList<>();
-            List<Function<HttpRequestExtend, Object>> gen  = new LinkedList<>();
-            while (ckass != Object.class)
+            else
             {
                 try
                 {
-                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(ValueAccessor.standard(f)));
+                    constructor = ckass.getDeclaredConstructor();
                 }
-                catch (Throwable e)
+                catch (NoSuchMethodException e)
                 {
-                    e.printStackTrace();
+                    ReflectUtil.throwException(e);
                 }
-                Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
-                    switch (ReflectUtil.getClassId(field.getType()))
-                    {
-                        case ReflectUtil.CLASS_INT,
-                             ReflectUtil.PRIMITIVE_INT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_BOOL,
-                             ReflectUtil.PRIMITIVE_BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_BYTE,
-                             ReflectUtil.PRIMITIVE_BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_SHORT,
-                             ReflectUtil.PRIMITIVE_SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_LONG,
-                             ReflectUtil.PRIMITIVE_LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_FLOAT,
-                             ReflectUtil.PRIMITIVE_FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_DOUBLE,
-                             ReflectUtil.PRIMITIVE_DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
-                        case ReflectUtil.CLASS_STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? value : String.valueOf(value)));
-                        case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR, ReflectUtil.CLASS_OBJECT -> gen.add(new UnSupportValueType(field));
-                        default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.getClassId(field.getType()));
-                    }
-                });
-                ckass = ckass.getSuperclass();
+                List<ValueAccessor>                       list = new LinkedList<>();
+                List<Function<HttpRequestExtend, Object>> gen  = new LinkedList<>();
+                while (ckass != Object.class)
+                {
+                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(ValueAccessor.standard(f)));
+                    Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
+                        switch (ReflectUtil.getClassId(field.getType()))
+                        {
+                            case ReflectUtil.CLASS_INT,
+                                 ReflectUtil.PRIMITIVE_INT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Integer.valueOf((String) value) : value instanceof Number ? ((Number) value).intValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_BOOL,
+                                 ReflectUtil.PRIMITIVE_BOOL -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Boolean.valueOf((String) value) : value instanceof Boolean ? value : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_BYTE,
+                                 ReflectUtil.PRIMITIVE_BYTE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Byte.valueOf((String) value) : value instanceof Number ? ((Number) value).byteValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_SHORT,
+                                 ReflectUtil.PRIMITIVE_SHORT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Short.valueOf((String) value) : value instanceof Number ? ((Number) value).shortValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_LONG,
+                                 ReflectUtil.PRIMITIVE_LONG -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Long.valueOf((String) value) : value instanceof Number ? ((Number) value).longValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_FLOAT,
+                                 ReflectUtil.PRIMITIVE_FLOAT -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Float.valueOf((String) value) : value instanceof Number ? ((Number) value).floatValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_DOUBLE,
+                                 ReflectUtil.PRIMITIVE_DOUBLE -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Double.valueOf((String) value) : value instanceof Number ? ((Number) value).doubleValue() : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_STRING -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? value : String.valueOf(value)));
+                            case ReflectUtil.CLASS_BIGDECIMAL -> gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? new java.math.BigDecimal((String) value) : value instanceof Number ? new java.math.BigDecimal(value.toString()) : new IllegalArgumentException()));
+                            case ReflectUtil.CLASS_ENUM ->
+                            {
+                                Class enumType = field.getType();
+                                gen.add(new SimpleClassParse(field.getName(), value -> value == null ? null : value instanceof String ? Enum.valueOf(enumType, (String) value) : value.getClass() == enumType ? value : new IllegalArgumentException()));
+                            }
+                            case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR, ReflectUtil.CLASS_OBJECT -> gen.add(new UnSupportValueType(field));
+                            default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.getClassId(field.getType()));
+                        }
+                    });
+                    ckass = ckass.getSuperclass();
+                }
+                valueAccessors  = list.toArray(ValueAccessor[]::new);
+                valueGenerators = gen.toArray(Function[]::new);
             }
-            valueAccessors  = list.toArray(ValueAccessor[]::new);
-            valueGenerators = gen.toArray(Function[]::new);
         }
 
         @Override
