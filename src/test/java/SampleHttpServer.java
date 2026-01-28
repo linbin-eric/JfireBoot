@@ -43,7 +43,7 @@ public class SampleHttpServer
         ChannelConfig channelConfig = new ChannelConfig().setPort(8082);
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
             SSLDecoder sslRequestDecoder = new SSLDecoder(sslEngine);
-            SSLEncoder sslEncoder = new SSLEncoder(sslEngine,sslRequestDecoder);
+            SSLEncoder sslEncoder = new SSLEncoder(sslEngine);
             try
             {
                 sslEngine.beginHandshake();
