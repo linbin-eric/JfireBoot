@@ -29,16 +29,18 @@ import java.util.function.Function;
 public class PathRequest
 {
     private String                                path;
+    private HttpMethod                            httpMethod;
     private Function<HttpRequestExtend, Object>[] paramValueGenerators;
     private Method                                method;
     private Object                                host;
     private RestfulMatch                          restfulMatch;
     private boolean                               needDeserializateJsonToParamMap = false;
 
-    public PathRequest(Method method, Object host)
+    public PathRequest(Method method, Object host, HttpMethod httpMethod)
     {
         this.method = method;
         this.host   = host;
+        this.httpMethod = httpMethod;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
         if (path.contains("${"))
@@ -110,6 +112,28 @@ public class PathRequest
                 }
             }
         }
+    }
+
+    /**
+     * 判断是否匹配指定的 HTTP 方法
+     *
+     * @param requestMethod 请求的 HTTP 方法字符串
+     * @return 如果匹配返回 true，否则返回 false
+     */
+    public boolean matchesMethod(String requestMethod)
+    {
+        return httpMethod.matches(requestMethod);
+    }
+
+    /**
+     * 获取路由 key，格式为 "路径:HTTP方法"
+     * 用于 requestMap 的 key 构建
+     *
+     * @return 路由 key
+     */
+    public String getRouteKey()
+    {
+        return path + ":" + httpMethod.name();
     }
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException

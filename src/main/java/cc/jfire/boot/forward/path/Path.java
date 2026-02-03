@@ -10,4 +10,9 @@ import java.lang.annotation.Target;
 public @interface Path
 {
     String value();
+
+    /**
+     * 允许的 HTTP 方法，默认为 ALL（匹配所有方法）
+     */
+    HttpMethod[] method() default HttpMethod.ALL;
 }

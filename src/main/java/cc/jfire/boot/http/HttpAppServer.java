@@ -2,6 +2,7 @@ package cc.jfire.boot.http;
 
 import cc.jfire.baseutil.RuntimeJVM;
 import cc.jfire.baseutil.StringUtil;
+import cc.jfire.boot.forward.path.HttpMethod;
 import cc.jfire.boot.forward.path.Path;
 import cc.jfire.boot.forward.path.PathRequest;
 import cc.jfire.boot.forward.path.PathRequestForwardProcessor;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class HttpAppServer
 {
@@ -116,10 +118,39 @@ public class HttpAppServer
     private static Map<String, PathRequest> parseFromApplication(ApplicationContext context)
     {
         context.makeAvailable();
+        // 除 ALL 外的所有具体 HTTP 方法
+        HttpMethod[] allConcreteMethods = {HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE, HttpMethod.PATCH, HttpMethod.HEAD, HttpMethod.OPTIONS};
         return context.getAllBeanRegisterInfos().stream()//
                       .flatMap(beanRegisterInfo -> Arrays.stream(beanRegisterInfo.getType().getDeclaredMethods()))//
                       .filter(method -> method.isAnnotationPresent(Path.class))//
-                      .map(method -> new PathRequest(method, context.getBeanRegisterInfo(method.getDeclaringClass()).get().getBean()))//
-                      .collect(Collectors.toMap(PathRequest::getPath, Function.identity()));
+                      .flatMap(method -> {
+                          Object       host        = context.getBeanRegisterInfo(method.getDeclaringClass()).get().getBean();
+                          Path         pathAnno    = method.getAnnotation(Path.class);
+                          String       pathValue   = pathAnno.value();
+                          HttpMethod[] httpMethods = pathAnno.method();
+                          boolean      containsAll = Arrays.asList(httpMethods).contains(HttpMethod.ALL);
+                          // RESTful 路径（包含 ${）
+                          if (pathValue.contains("${"))
+                          {
+                              if (containsAll)
+                              {
+                                  // 包含 ALL，只生成一个 PathRequest
+                                  return Stream.of(new PathRequest(method, host, HttpMethod.ALL));
+                              }
+                              // 不包含 ALL，按数组展开
+                              return Arrays.stream(httpMethods).map(httpMethod -> new PathRequest(method, host, httpMethod));
+                          }
+                          // 非 RESTful 路径：展开 method 数组，ALL 展开为所有具体方法
+                          return Arrays.stream(httpMethods)
+                                       .flatMap(httpMethod -> {
+                                           if (httpMethod == HttpMethod.ALL)
+                                           {
+                                               return Arrays.stream(allConcreteMethods);
+                                           }
+                                           return Stream.of(httpMethod);
+                                       })
+                                       .map(httpMethod -> new PathRequest(method, host, httpMethod));
+                      })//
+                      .collect(Collectors.toMap(PathRequest::getRouteKey, Function.identity()));
     }
 }
