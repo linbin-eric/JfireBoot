@@ -494,6 +494,31 @@ public class DataSourceConfig {
 }
 ```
 
+### 注册外部单例 Bean
+
+如果你有一个已经创建好的对象实例（例如第三方库创建的对象、手动 new 的对象等），可以通过 `registerBeanRegisterInfo` 方法将其注册到容器中：
+
+```java
+import cc.jfire.jfire.core.ApplicationContext;
+import cc.jfire.jfire.core.bean.impl.register.OutterBeanRegisterInfo;
+
+ApplicationContext context = ApplicationContext.boot(AppConfig.class);
+
+// 注册外部单例对象到容器
+MyService externalService = new MyService();
+context.registerBeanRegisterInfo(new OutterBeanRegisterInfo(externalService, "myService"));
+
+// 之后可以通过容器获取
+MyService service = context.getBean("myService");
+MyService serviceByType = context.getBean(MyService.class);
+```
+
+这在以下场景非常有用：
+
+- 集成第三方库创建的对象（如连接池、客户端实例等）
+- 需要在容器启动前手动创建并配置的对象
+- 将非 Jfire 管理的对象纳入 IOC 容器统一管理
+
 ### AOP 方法匹配表达式（签名修正）
 
 Jfire 的 AOP 方法匹配表达式要求包含括号：
