@@ -1,131 +1,74 @@
 package cc.jfire.boot.forward.path;
 
-import cc.jfire.baseutil.StringUtil;
-import lombok.Data;
-import lombok.ToString;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class RestfulMatch
 {
-    private AnalysisNode[] analysisNodes;
+    private Segment[] segments;
 
     public RestfulMatch(String path)
     {
-        List<AnalysisNode> list = new ArrayList<>();
-        int                index;
-        while ((index = path.indexOf("${")) != -1)
+        String[]      parts = path.split("/", -1);
+        List<Segment> list  = new ArrayList<>();
+        for (String part : parts)
         {
-            if (index == 0)
+            if (part.isEmpty())
             {
-                int end = path.indexOf("}");
-                if (end == -1)
-                {
-                    throw new IllegalStateException("地址没有完全使用${}包围，无法解析");
-                }
-                String       name         = path.substring(index + 2, end);
-                AnalysisNode analysisNode = new AnalysisNode();
-                analysisNode.setFragment(name);
-                analysisNode.setParameter(true);
-                if (!list.isEmpty())
-                {
-                    AnalysisNode last = list.get(list.size() - 1);
-                    last.setNext(analysisNode);
-                    analysisNode.setPrev(last);
-                }
-                list.add(analysisNode);
-                path = path.substring(end + 1);
+                continue;
+            }
+            if (part.startsWith("${") && part.endsWith("}"))
+            {
+                String name = part.substring(2, part.length() - 1);
+                list.add(new Segment(name, true));
             }
             else
             {
-                String       pathFragment = path.substring(0, index);
-                AnalysisNode node         = new AnalysisNode();
-                node.setFragment(pathFragment);
-                node.setParameter(false);
-                if (!list.isEmpty())
-                {
-                    AnalysisNode last = list.get(list.size() - 1);
-                    last.setNext(node);
-                    node.setPrev(last);
-                }
-                list.add(node);
-                path = path.substring(index);
+                list.add(new Segment(part, false));
             }
         }
-        if (StringUtil.isNotBlank(path))
-        {
-            AnalysisNode node = new AnalysisNode();
-            node.setFragment(path);
-            node.setParameter(false);
-            if (!list.isEmpty())
-            {
-                AnalysisNode last = list.get(list.size() - 1);
-                last.setNext(node);
-                node.setPrev(last);
-            }
-            list.add(node);
-        }
-        analysisNodes = list.toArray(AnalysisNode[]::new);
+        this.segments = list.toArray(new Segment[0]);
     }
 
     public boolean match(String path, Map<String, Object> params)
     {
-        int start = 0;
-        for (AnalysisNode analysisNode : analysisNodes)
+        String[]     parts           = path.split("/", -1);
+        List<String> requestSegments = new ArrayList<>();
+        for (String part : parts)
         {
-            if (analysisNode.parameter)
+            if (!part.isEmpty())
             {
-                continue;
+                requestSegments.add(part);
+            }
+        }
+        if (requestSegments.size() != segments.length)
+        {
+            return false;
+        }
+        Map<String, Object> tempParams = new HashMap<>();
+        for (int i = 0; i < segments.length; i++)
+        {
+            Segment segment = segments[i];
+            String  actual  = requestSegments.get(i);
+            if (segment.parameter)
+            {
+                tempParams.put(segment.value, actual);
             }
             else
             {
-                int index = path.indexOf(analysisNode.getFragment(), start);
-                if (index == -1)
+                if (!segment.value.equals(actual))
                 {
                     return false;
                 }
-                start = index + analysisNode.getFragment().length();
             }
         }
-        int index = start = 0;
-        for (int i = 0; i < analysisNodes.length; i++)
-        {
-            AnalysisNode analysisNode = analysisNodes[i];
-            if (analysisNode.isParameter())
-            {
-                continue;
-            }
-            else
-            {
-                index = path.indexOf(analysisNode.fragment, start);
-                if (start == index)
-                {
-                    ;
-                }
-                else
-                {
-                    params.put(analysisNode.getPrev().getFragment(), path.substring(start, index));
-                }
-                start = index + analysisNode.fragment.length();
-            }
-        }
-        if (start != path.length())
-        {
-            params.put(analysisNodes[analysisNodes.length - 1].getFragment(), path.substring(start));
-        }
+        params.putAll(tempParams);
         return true;
     }
 
-    @Data
-    class AnalysisNode
+    record Segment(String value, boolean parameter)
     {
-        @ToString.Exclude
-        AnalysisNode prev;
-        @ToString.Exclude
-        AnalysisNode next;
-        String  fragment;
-        boolean parameter;
     }
 }
