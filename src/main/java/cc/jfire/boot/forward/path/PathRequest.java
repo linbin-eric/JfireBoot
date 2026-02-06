@@ -34,12 +34,12 @@ public class PathRequest
     private Method                                method;
     private Object                                host;
     private RestfulMatch                          restfulMatch;
-    private boolean                               needDeserializateJsonToParamMap = false;
+    private boolean                               hasSimpleTypeParam = false;
 
     public PathRequest(Method method, Object host, HttpMethod httpMethod)
     {
-        this.method = method;
-        this.host   = host;
+        this.method     = method;
+        this.host       = host;
         this.httpMethod = httpMethod;
         Path annotation = AnnotationContext.getAnnotation(Path.class, method);
         path = annotation.value();
@@ -49,11 +49,8 @@ public class PathRequest
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
-        /**
-         * 如果存在简单类型，那么进行Json识别的时候，就要将识别后的Json放入ParamMap中。
-         */
-        needDeserializateJsonToParamMap = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.getClassId(type) != ReflectUtil.CLASS_OBJECT);
-        paramValueGenerators            = new Function[paramNames.length];
+        hasSimpleTypeParam   = Arrays.stream(parameterTypes).anyMatch(type -> ReflectUtil.getClassId(type) != ReflectUtil.CLASS_OBJECT);
+        paramValueGenerators = new Function[paramNames.length];
         for (int i = 0; i < paramNames.length; i++)
         {
             int classId = ReflectUtil.getClassId(parameterTypes[i]);
@@ -138,7 +135,7 @@ public class PathRequest
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
-        requestExtend.ensureParamMapReady(needDeserializateJsonToParamMap);
+        requestExtend.ensureParamMapReady(hasSimpleTypeParam);
         return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
     }
 
@@ -207,7 +204,7 @@ public class PathRequest
         public UnifiedObjectParse(Class ckass, Type type)
         {
             this.type = type;
-            if (ckass.isInterface())
+            if (ckass.isInterface() || ckass.isArray())
             {
             }
             else
@@ -263,9 +260,8 @@ public class PathRequest
         @Override
         public Object apply(HttpRequestExtend requestExtend)
         {
-            // 对于 application/json 且不需要解析到 paramMap 的情况，直接反序列化整个 JSON
             String contentType = requestExtend.getContentType();
-            if (contentType != null && contentType.toLowerCase().startsWith("application/json") && !needDeserializateJsonToParamMap)
+            if (contentType != null && contentType.toLowerCase().startsWith("application/json"))
             {
                 String utf8StrBody = requestExtend.getUtf8StrBody();
                 if (utf8StrBody != null)

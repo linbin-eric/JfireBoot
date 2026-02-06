@@ -140,7 +140,7 @@ public class HttpRequestExtend implements AutoCloseable
                 }
                 else
                 {
-                    String key = URLDecoder.decode(v.substring(0, paramValueIndex), StandardCharsets.UTF_8);
+                    String key   = URLDecoder.decode(v.substring(0, paramValueIndex), StandardCharsets.UTF_8);
                     String value = URLDecoder.decode(v.substring(paramValueIndex + 1), StandardCharsets.UTF_8);
                     paramMap.put(key, value);
                 }
@@ -148,7 +148,7 @@ public class HttpRequestExtend implements AutoCloseable
         }
     }
 
-    public void ensureParamMapReady(boolean needDeserializateJsonToParamMap)
+    public void ensureParamMapReady(boolean hasSimpleTypeParam)
     {
         if (contentType == null)
         {
@@ -157,17 +157,14 @@ public class HttpRequestExtend implements AutoCloseable
         String lowerContentType = contentType.toLowerCase();
         if (lowerContentType.startsWith("application/json"))
         {
-            if (needDeserializateJsonToParamMap && utf8StrBody != null)
+            if (hasSimpleTypeParam)
             {
                 parseJsonBodyToParamMap();
             }
         }
         else if (lowerContentType.startsWith("application/x-www-form-urlencoded"))
         {
-            if (utf8StrBody != null)
-            {
-                parseUrlEncodedBodyToParamMap();
-            }
+            parseUrlEncodedBodyToParamMap();
         }
         // multipart/form-data 已在 from() 中解析完成，无需额外操作
     }
