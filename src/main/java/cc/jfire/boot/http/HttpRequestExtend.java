@@ -152,6 +152,7 @@ public class HttpRequestExtend implements AutoCloseable
     {
         if (contentType == null)
         {
+            getNotNullParamMap();
             return;
         }
         String lowerContentType = contentType.toLowerCase();
