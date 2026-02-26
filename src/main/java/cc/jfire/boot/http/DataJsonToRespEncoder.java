@@ -21,7 +21,7 @@ public class DataJsonToRespEncoder implements WriteProcessor<Object>
         else
         {
             HttpResponse httpResponse = new HttpResponse();
-            httpResponse.setBodyText(Dson.toJson(data));
+            httpResponse.setBodyText(Dson.toJson(data), next.pipeline().allocator());
             next.fireWrite(httpResponse);
         }
     }

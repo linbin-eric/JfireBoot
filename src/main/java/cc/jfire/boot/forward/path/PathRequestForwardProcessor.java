@@ -87,7 +87,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                 HttpResponse response = new HttpResponse();
                 response.getHead().setStatusCode(405);
                 response.getHead().setReasonPhrase("Method Not Allowed");
-                response.setBodyText("Method Not Allowed");
+                response.setBodyText("Method Not Allowed", next.pipeline().allocator());
                 next.pipeline().fireWrite(response);
                 return;
             }
@@ -98,7 +98,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
         {
             log.error("请求出现异常,当前请求路径:{}", path, e);
             HttpResponse response = new HttpResponse();
-            response.setBodyText("error:" + e.toString());
+            response.setBodyText("error:" + e.toString(), next.pipeline().allocator());
             next.pipeline().fireWrite(response);
         }
     }

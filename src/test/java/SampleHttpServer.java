@@ -1,3 +1,4 @@
+import cc.jfire.boot.http.DataJsonToRespEncoder;
 import cc.jfire.jnet.common.api.ReadProcessor;
 import cc.jfire.jnet.common.api.ReadProcessorNode;
 import cc.jfire.jnet.common.util.ChannelConfig;
@@ -5,7 +6,6 @@ import cc.jfire.jnet.extend.http.coder.*;
 import cc.jfire.jnet.extend.http.dto.HttpRequest;
 import cc.jfire.jnet.extend.http.dto.HttpResponse;
 import cc.jfire.jnet.server.AioServer;
-import cc.jfire.boot.http.DataJsonToRespEncoder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,7 +43,7 @@ public class SampleHttpServer
         ChannelConfig channelConfig = new ChannelConfig().setPort(8082);
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
             SSLDecoder sslRequestDecoder = new SSLDecoder(sslEngine);
-            SSLEncoder sslEncoder = new SSLEncoder(sslEngine);
+            SSLEncoder sslEncoder        = new SSLEncoder(sslEngine);
             try
             {
                 sslEngine.beginHandshake();
@@ -65,7 +65,7 @@ public class SampleHttpServer
                     data.close();
                     HttpResponse resp = new HttpResponse();
                     resp.getHead().addHeader("content-type", "text/html");
-                    resp.setBodyText("hello y");
+                    resp.setBodyText("hello y", next.pipeline().allocator());
                     next.pipeline().fireWrite(resp);
                 }
             });

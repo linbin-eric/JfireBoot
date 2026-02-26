@@ -24,7 +24,7 @@ public class NotFoundUrlProcessor implements ReadProcessor<Object>
             HttpResponse response = new HttpResponse();
             response.getHead().setStatusCode(404);
             response.getHead().setReasonPhrase("Not Found");
-            response.setBodyText("notAvailable path:" + purePath);
+            response.setBodyText("notAvailable path:" + purePath, next.pipeline().allocator());
             requestExtend.getPipeline().fireWrite(response);
         }
         else
@@ -48,7 +48,7 @@ public class NotFoundUrlProcessor implements ReadProcessor<Object>
                     HttpResponse response = new HttpResponse();
                     response.getHead().setStatusCode(404);
                     response.getHead().setReasonPhrase("Not Found");
-                    response.setBodyText("notAvailable path:" + purePath);
+                    response.setBodyText("notAvailable path:" + purePath, next.pipeline().allocator());
                     request.close();
                     next.pipeline().fireWrite(response);
                 }
