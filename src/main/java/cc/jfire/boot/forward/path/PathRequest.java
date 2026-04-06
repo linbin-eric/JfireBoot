@@ -221,8 +221,13 @@ public class PathRequest
                 List<Function<HttpRequestExtend, Object>> gen  = new LinkedList<>();
                 while (ckass != Object.class)
                 {
-                    Arrays.stream(ckass.getDeclaredFields()).forEach(f -> list.add(ValueAccessor.standard(f)));
-                    Arrays.stream(ckass.getDeclaredFields()).forEach(field -> {
+                    for (Field field : ckass.getDeclaredFields())
+                    {
+                        if (Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers()))
+                        {
+                            continue;
+                        }
+                        list.add(ValueAccessor.standard(field));
                         switch (ReflectUtil.getClassId(field.getType()))
                         {
                             case ReflectUtil.CLASS_INT,
@@ -249,7 +254,7 @@ public class PathRequest
                             case ReflectUtil.CLASS_CHAR, ReflectUtil.PRIMITIVE_CHAR, ReflectUtil.CLASS_OBJECT -> gen.add(new UnSupportValueType(field));
                             default -> throw new IllegalStateException("Unexpected value: " + ReflectUtil.getClassId(field.getType()));
                         }
-                    });
+                    }
                     ckass = ckass.getSuperclass();
                 }
                 valueAccessors  = list.toArray(ValueAccessor[]::new);
