@@ -13,6 +13,7 @@ import cc.jfire.jnet.extend.http.coder.HttpRequestAggregator;
 import cc.jfire.jnet.extend.http.coder.HttpRespEncoder;
 import cc.jfire.jnet.extend.http.coder.OptionsProcessor;
 import cc.jfire.jnet.extend.http.coder.ResourceProcessor;
+import cc.jfire.jnet.extend.websocket.coder.AbstractWebsocketProcessor;
 import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameDecoder;
 import cc.jfire.jnet.extend.websocket.coder.WebSocketFrameEncoder;
 import cc.jfire.jnet.extend.websocket.coder.WebSocketUpgradeDecoder;
@@ -35,8 +36,8 @@ public class HttpAppServer
         private ChannelConfig           channelConfig;
         private ApplicationContext      context;
         private String                  webDir;
-        private ReadProcessor<Object>[] beforeProcessor;
-        private ReadProcessor<Object>   webSocketProcessor;
+        private ReadProcessor<Object>[]    beforeProcessor;
+        private AbstractWebsocketProcessor webSocketProcessor;
     }
 
     public static AioServer start(StartParam param)
@@ -110,7 +111,7 @@ public class HttpAppServer
                                      .setBeforeProcessor(before));
     }
 
-    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<Object>[] beforeProcessors, ReadProcessor<Object> webSocketProcessor)
+    public static AioServer start(int port, ApplicationContext context, String webDir, ReadProcessor<Object>[] beforeProcessors, AbstractWebsocketProcessor webSocketProcessor)
     {
         return start(new StartParam().setContext(context).setChannelConfig(new ChannelConfig().setPort(port).setChannelGroup(ChannelConfig.DEFAULT_CHANNEL_GROUP)).setWebDir(webDir).setBeforeProcessor(beforeProcessors).setWebSocketProcessor(webSocketProcessor));
     }
