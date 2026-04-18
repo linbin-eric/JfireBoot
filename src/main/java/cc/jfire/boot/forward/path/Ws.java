@@ -7,12 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface Path
+public @interface Ws
 {
     String value();
-
-    /**
-     * 允许的 HTTP 方法，默认为 ALL（匹配所有方法）
-     */
-    HttpMethod[] method() default HttpMethod.ALL;
 }

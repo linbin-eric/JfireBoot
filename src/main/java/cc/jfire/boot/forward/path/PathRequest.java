@@ -1,10 +1,12 @@
 package cc.jfire.boot.forward.path;
 
+import cc.jfire.baseutil.STR;
 import cc.jfire.baseutil.StringUtil;
 import cc.jfire.baseutil.bytecode.support.AnnotationContext;
 import cc.jfire.baseutil.bytecode.util.BytecodeUtil;
 import cc.jfire.baseutil.reflect.ReflectUtil;
 import cc.jfire.baseutil.reflect.valueaccessor.ValueAccessor;
+import cc.jfire.baseutil.uniqueid.WinterId;
 import cc.jfire.boot.forward.openapi.JsonAttribute;
 import cc.jfire.boot.http.FilePart;
 import cc.jfire.boot.http.HttpRequestExtend;
@@ -28,24 +30,41 @@ import java.util.function.Function;
 @Data
 public class PathRequest
 {
-    private String                                path;
-    private HttpMethod                            httpMethod;
-    private Function<HttpRequestExtend, Object>[] paramValueGenerators;
-    private Method                                method;
-    private Object                                host;
-    private RestfulMatch                          restfulMatch;
-    private boolean                               hasSimpleTypeParam = false;
+    private             String                                path;
+    private             HttpMethod[]                          httpMethods;
+    private             boolean                               allowAll;
+    private             Function<HttpRequestExtend, Object>[] paramValueGenerators;
+    private             Method                                method;
+    private             Object                                host;
+    private             RestfulMatch                          restfulMatch;
+    private             boolean                               hasSimpleTypeParam = false;
+    private             boolean                               ws;
+    public static final String                                WS_KEY             = "ws-connection-" + WinterId.instance().generate();
 
-    public PathRequest(Method method, Object host, HttpMethod httpMethod)
+    public PathRequest(Method method, Object host, HttpMethod[] httpMethods, boolean allowAll)
     {
-        this.method     = method;
-        this.host       = host;
-        this.httpMethod = httpMethod;
-        Path annotation = AnnotationContext.getAnnotation(Path.class, method);
-        path = annotation.value();
-        if (path.contains("${"))
+        this.method      = method;
+        this.host        = host;
+        this.allowAll    = allowAll;
+        this.httpMethods = httpMethods;
+        ws               = method.isAnnotationPresent(Ws.class);
+        if (ws)
         {
-            restfulMatch = new RestfulMatch(path);
+            path          = method.getAnnotation(Ws.class).value();
+            this.allowAll = true;
+            if (Arrays.stream(method.getParameterTypes()).noneMatch(t -> t == WsConnection.class))
+            {
+                throw new IllegalArgumentException(STR.format("使用 WS 注解的方法，一定要有 WsConnection 参数。检查方法{}.{}", method.getDeclaringClass().getName(), method.getName()));
+            }
+        }
+        else
+        {
+            Path annotation = AnnotationContext.getAnnotation(Path.class, method);
+            path = annotation.value();
+            if (path.contains("${"))
+            {
+                restfulMatch = new RestfulMatch(path);
+            }
         }
         String[]   paramNames     = BytecodeUtil.parseMethodParamNames(method);
         Class<?>[] parameterTypes = method.getParameterTypes();
@@ -88,6 +107,10 @@ public class PathRequest
                     {
                         paramValueGenerators[i] = new PipelineParse();
                     }
+                    else if (parameterTypes[i] == WsConnection.class)
+                    {
+                        paramValueGenerators[i] = new WsConnectionParse();
+                    }
                     else if (List.class.equals(parameterTypes[i]) && method.getGenericParameterTypes()[i] instanceof ParameterizedType && ((ParameterizedType) method.getGenericParameterTypes()[i]).getActualTypeArguments()[0] == FilePart.class)
                     {
                         paramValueGenerators[i] = new FilePartParse();
@@ -119,24 +142,36 @@ public class PathRequest
      */
     public boolean matchesMethod(String requestMethod)
     {
-        return httpMethod.matches(requestMethod);
-    }
-
-    /**
-     * 获取路由 key，格式为 "路径:HTTP方法"
-     * 用于 requestMap 的 key 构建
-     *
-     * @return 路由 key
-     */
-    public String getRouteKey()
-    {
-        return path + ":" + httpMethod.name();
+        if (allowAll)
+        {
+            return true;
+        }
+        else
+        {
+            for (HttpMethod httpMethod : httpMethods)
+            {
+                if (httpMethod.matches(requestMethod))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
     {
         requestExtend.ensureParamMapReady(hasSimpleTypeParam);
         return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
+    }
+
+    /**
+     *
+     * @return
+     */
+    public String getRouteKey()
+    {
+        return path;
     }
 
     class SimpleClassParse implements Function<HttpRequestExtend, Object>
@@ -164,6 +199,17 @@ public class PathRequest
         public Object apply(HttpRequestExtend requestExtend)
         {
             return requestExtend.getPipeline();
+        }
+    }
+
+    class WsConnectionParse implements Function<HttpRequestExtend, Object>
+    {
+        @Override
+        public Object apply(HttpRequestExtend httpRequestExtend)
+        {
+            WsConnection wsConnection = new WsConnection().setPipeline(httpRequestExtend.getPipeline());
+            httpRequestExtend.getPipeline().putPersistenceStore(WS_KEY, wsConnection);
+            return wsConnection;
         }
     }
 
