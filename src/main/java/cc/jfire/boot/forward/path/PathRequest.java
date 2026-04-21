@@ -41,12 +41,10 @@ public class PathRequest
     private             boolean                               ws;
     public static final String                                WS_KEY             = "ws-connection-" + WinterId.instance().generate();
 
-    public PathRequest(Method method, Object host, HttpMethod[] httpMethods, boolean allowAll)
+    public PathRequest(Method method, Object host)
     {
         this.method      = method;
         this.host        = host;
-        this.allowAll    = allowAll;
-        this.httpMethods = httpMethods;
         ws               = method.isAnnotationPresent(Ws.class);
         if (ws)
         {
@@ -60,6 +58,8 @@ public class PathRequest
         else
         {
             Path annotation = AnnotationContext.getAnnotation(Path.class, method);
+            httpMethods = annotation.method();
+            allowAll = Arrays.stream(httpMethods).anyMatch(m -> m == HttpMethod.ALL);
             path = annotation.value();
             if (path.contains("${"))
             {

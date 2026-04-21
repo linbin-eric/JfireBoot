@@ -2,7 +2,10 @@ package cc.jfire.boot.http;
 
 import cc.jfire.baseutil.RuntimeJVM;
 import cc.jfire.baseutil.StringUtil;
-import cc.jfire.boot.forward.path.*;
+import cc.jfire.boot.forward.path.Path;
+import cc.jfire.boot.forward.path.PathRequest;
+import cc.jfire.boot.forward.path.PathRequestForwardProcessor;
+import cc.jfire.boot.forward.path.Ws;
 import cc.jfire.jfire.core.ApplicationContext;
 import cc.jfire.jfire.core.bean.BeanRegisterInfo;
 import cc.jfire.jnet.common.api.ReadProcessor;
@@ -17,7 +20,6 @@ import lombok.experimental.Accessors;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class HttpAppServer
@@ -40,11 +42,11 @@ public class HttpAppServer
         AioServer aioServer = AioServer.newAioServer(channelConfig, pipeline -> {
             if (hasWs)
             {
-                pipeline.addReadProcessor(new HttpRequestPartDecoder());
+                pipeline.addReadProcessor(new WebSocketUpgradeDecoder());
             }
             else
             {
-                pipeline.addReadProcessor(new WebSocketUpgradeDecoder());
+                pipeline.addReadProcessor(new HttpRequestPartDecoder());
             }
             pipeline.addReadProcessor(new HttpRequestAggregator(hasWs));
             if (hasWs)
@@ -111,18 +113,10 @@ public class HttpAppServer
         {
             for (Method method : beanRegisterInfo.getType().getDeclaredMethods())
             {
-                Object instance = beanRegisterInfo.get().getBean();
-                if (method.isAnnotationPresent(Path.class))
+                if (method.isAnnotationPresent(Path.class) || method.isAnnotationPresent(Ws.class))
                 {
-                    Path         pathAnno    = method.getAnnotation(Path.class);
-                    HttpMethod[] httpMethods = pathAnno.method();
-                    boolean      containsAll = Arrays.asList(httpMethods).contains(HttpMethod.ALL);
-                    pathRequests.add(new PathRequest(method, instance, httpMethods, containsAll));
-                }
-                else if (method.isAnnotationPresent(Ws.class))
-                {
-                    Ws wsAnno = method.getAnnotation(Ws.class);
-                    pathRequests.add(new PathRequest(method, instance, null, true));
+                    Object instance = beanRegisterInfo.get().getBean();
+                    pathRequests.add(new PathRequest(method, instance));
                 }
                 else
                 {
