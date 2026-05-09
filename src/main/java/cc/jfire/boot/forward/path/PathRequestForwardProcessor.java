@@ -1,5 +1,6 @@
 package cc.jfire.boot.forward.path;
 
+import cc.jfire.baseutil.STR;
 import cc.jfire.boot.common.TraceId;
 import cc.jfire.boot.http.HttpRequestExtend;
 import cc.jfire.jnet.common.api.ReadProcessor;
@@ -11,6 +12,7 @@ import cc.jfire.jnet.extend.websocket.dto.WebSocketFrame;
 import cc.jfire.jnet.extend.websocket.util.WebSocketHandshakeUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +20,8 @@ import java.util.Map;
 @Slf4j
 public class PathRequestForwardProcessor implements ReadProcessor<Object>
 {
-    private Map<String, PathRequest> specificRequestMap;
-    private PathRequest[]            restfulRequests;
+    private Map<String, PathRequest[]> specificRequestMap;
+    private PathRequest[]              restfulRequests;
 
     public PathRequestForwardProcessor(List<PathRequest> pathRequests)
     {
@@ -28,10 +30,43 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
         {
             if (pathRequest.getRestfulMatch() == null)
             {
-                specificRequestMap.put(pathRequest.getRouteKey(), pathRequest);
+                if (specificRequestMap.containsKey(pathRequest.getRouteKey()))
+                {
+                    PathRequest[] old = specificRequestMap.get(pathRequest.getRouteKey());
+                    checkValid(old, pathRequest);
+                    PathRequest[] newOne = Arrays.copyOf(old, old.length + 1);
+                    newOne[newOne.length - 1] = pathRequest;
+                    specificRequestMap.put(pathRequest.getRouteKey(), newOne);
+                }
+                else
+                {
+                    specificRequestMap.put(pathRequest.getRouteKey(), new PathRequest[]{pathRequest});
+                }
+            }
+        } restfulRequests = pathRequests.stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
+    }
+
+    /**
+     * 确认是否合法。
+     * 不允许添加的http method 重复.
+     *
+     *
+     * @param old
+     * @param pathRequest
+     * @return
+     */
+    private void checkValid(PathRequest[] old, PathRequest pathRequest)
+    {
+        for (PathRequest each : old)
+        {
+            for (HttpMethod httpMethod : pathRequest.getHttpMethods())
+            {
+                if (each.matchesMethod(httpMethod.name()))
+                {
+                    throw new IllegalArgumentException(STR.format("方法:{}.{}的路径、http 方法和方法:{}.{}有重复", each.getMethod().getDeclaringClass().getName(),each.getMethod().getName(),pathRequest.getMethod().getDeclaringClass().getName(),pathRequest.getMethod().getName()));
+                }
             }
         }
-        restfulRequests = pathRequests.stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
     }
 
     @TraceId
@@ -61,8 +96,9 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
             path = requestExtend.getPath();
             String requestMethod = requestExtend.getMethod();
             // 尝试精确匹配：路径 + HTTP 方法（非 RESTful 路径的 ALL 已在注册时展开）
-            PathRequest pathRequest = specificRequestMap.get(path);
-            if (pathRequest == null)
+            PathRequest[] pathRequests = specificRequestMap.get(path);
+            PathRequest   selected     = null;
+            if (pathRequests == null)
             {
                 // 精确路径未匹配，尝试 RESTful 路由
                 Map<String, Object> paramMap         = requestExtend.getNotNullParamMap();
@@ -73,44 +109,51 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                     paramMap.putAll(originalParamMap);
                     if (restfulRequest.getRestfulMatch().match(path, paramMap))
                     {
-                        pathRequest = restfulRequest;
+                        selected = restfulRequest;
                     }
+                }
+                if (selected == null)
+                {
+                    // 路径不存在，传递给下一个处理器（404）
+                    next.fireRead(requestExtend);
+                    return;
                 }
             }
-            if (pathRequest != null)
+            else
             {
-                if (pathRequest.matchesMethod(requestMethod))
+                for (PathRequest pathRequest : pathRequests)
                 {
-                    if (pathRequest.isWs())
+                    if (pathRequest.matchesMethod(requestMethod))
                     {
-                        //此时首先自动回复 101响应
-                        IoBuffer buffer = WebSocketHandshakeUtil.buildUpgradeResponse(getSecWebSocketKey(requestExtend), next.pipeline().allocator());
-                        next.pipeline().fireWrite(buffer);
-                        //执行的时候会将 wsconnection绑定到当前的 pipeline
-                        pathRequest.invoke(requestExtend);
-                    }
-                    else
-                    {
-                        Object value = pathRequest.invoke(requestExtend);
-                        if (value != null)
-                        {
-                            next.pipeline().fireWrite(value);
-                        }
+                        selected = pathRequest;
+                        break;
                     }
                 }
-                else
+                if (selected == null)
                 {
                     HttpResponse response = new HttpResponse();
                     response.getHead().setStatusCode(405);
                     response.getHead().setReasonPhrase("Method Not Allowed");
                     response.setBodyText("Method Not Allowed.for request:" + path, next.pipeline().allocator());
                     next.pipeline().fireWrite(response);
+                    return;
                 }
+            }
+            if (selected.isWs())
+            {
+                //此时首先自动回复 101响应
+                IoBuffer buffer = WebSocketHandshakeUtil.buildUpgradeResponse(getSecWebSocketKey(requestExtend), next.pipeline().allocator());
+                next.pipeline().fireWrite(buffer);
+                //执行的时候会将 wsconnection绑定到当前的 pipeline
+                selected.invoke(requestExtend);
             }
             else
             {
-                // 路径不存在，传递给下一个处理器（404）
-                next.fireRead(requestExtend);
+                Object value = selected.invoke(requestExtend);
+                if (value != null)
+                {
+                    next.pipeline().fireWrite(value);
+                }
             }
         }
         catch (Throwable e)

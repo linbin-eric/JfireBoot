@@ -44,6 +44,11 @@
         </dependency>
         <dependency>
             <groupId>cc.jfire</groupId>
+            <artifactId>jfire</artifactId>
+            <version>1.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>cc.jfire</groupId>
             <artifactId>Jnet</artifactId>
             <version>1.0.1-SNAPSHOT</version>
         </dependency>
