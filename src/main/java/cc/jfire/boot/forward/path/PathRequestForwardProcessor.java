@@ -43,7 +43,8 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                     specificRequestMap.put(pathRequest.getRouteKey(), new PathRequest[]{pathRequest});
                 }
             }
-        } restfulRequests = pathRequests.stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
+        }
+        restfulRequests = pathRequests.stream().filter(request -> request.getRestfulMatch() != null).toArray(PathRequest[]::new);
     }
 
     /**
@@ -63,7 +64,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
             {
                 if (each.matchesMethod(httpMethod.name()))
                 {
-                    throw new IllegalArgumentException(STR.format("方法:{}.{}的路径、http 方法和方法:{}.{}有重复", each.getMethod().getDeclaringClass().getName(),each.getMethod().getName(),pathRequest.getMethod().getDeclaringClass().getName(),pathRequest.getMethod().getName()));
+                    throw new IllegalArgumentException(STR.format("方法:{}.{}的路径、http 方法和方法:{}.{}有重复", each.getMethod().getDeclaringClass().getName(), each.getMethod().getName(), pathRequest.getMethod().getDeclaringClass().getName(), pathRequest.getMethod().getName()));
                 }
             }
         }
@@ -107,7 +108,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                 {
                     paramMap.clear();
                     paramMap.putAll(originalParamMap);
-                    if (restfulRequest.getRestfulMatch().match(path, paramMap))
+                    if (restfulRequest.getRestfulMatch().match(path, paramMap) && restfulRequest.matchesMethod(requestMethod))
                     {
                         selected = restfulRequest;
                     }
