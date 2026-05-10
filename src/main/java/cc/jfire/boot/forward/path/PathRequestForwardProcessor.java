@@ -111,6 +111,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                     if (restfulRequest.getRestfulMatch().match(path, paramMap) && restfulRequest.matchesMethod(requestMethod))
                     {
                         selected = restfulRequest;
+                        break;
                     }
                 }
                 if (selected == null)
