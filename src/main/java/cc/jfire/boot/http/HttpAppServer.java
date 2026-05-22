@@ -2,10 +2,7 @@ package cc.jfire.boot.http;
 
 import cc.jfire.baseutil.RuntimeJVM;
 import cc.jfire.baseutil.StringUtil;
-import cc.jfire.boot.forward.path.Path;
-import cc.jfire.boot.forward.path.PathRequest;
-import cc.jfire.boot.forward.path.PathRequestForwardProcessor;
-import cc.jfire.boot.forward.path.Ws;
+import cc.jfire.boot.forward.path.*;
 import cc.jfire.jfire.core.ApplicationContext;
 import cc.jfire.jfire.core.bean.BeanRegisterInfo;
 import cc.jfire.jnet.common.api.ReadProcessor;
@@ -69,7 +66,7 @@ public class HttpAppServer
                     pipeline.addReadProcessor(processor);
                 }
             }
-            pipeline.addReadProcessor(new PathRequestForwardProcessor(parseResult));
+            pipeline.addReadProcessor(new PathRequestForwardProcessor(parseResult, param.getContext().getBean(RequestInterceptor.class)));
             if (StringUtil.isNotBlank(webDir))
             {
                 pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));

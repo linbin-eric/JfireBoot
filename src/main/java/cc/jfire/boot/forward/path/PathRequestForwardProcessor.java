@@ -11,6 +11,7 @@ import cc.jfire.jnet.extend.http.dto.HttpRequest;
 import cc.jfire.jnet.extend.http.dto.HttpResponse;
 import cc.jfire.jnet.extend.websocket.dto.WebSocketFrame;
 import cc.jfire.jnet.extend.websocket.util.WebSocketHandshakeUtil;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
@@ -23,10 +24,12 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
 {
     private Map<String, PathRequest[]> specificRequestMap;
     private PathRequest[]              restfulRequests;
+    private RequestInterceptor         requestInterceptor;
 
-    public PathRequestForwardProcessor(List<PathRequest> pathRequests)
+    public PathRequestForwardProcessor(List<PathRequest> pathRequests, RequestInterceptor requestInterceptor)
     {
-        specificRequestMap = new HashMap<>();
+        this.requestInterceptor = requestInterceptor;
+        specificRequestMap      = new HashMap<>();
         for (PathRequest pathRequest : pathRequests)
         {
             if (pathRequest.getRestfulMatch() == null)
@@ -93,20 +96,21 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
     /**
      * AI 生成：在路由转发前构建扩展请求，并将解析错误映射成明确的 HTTP 错误响应。
      */
+    @SneakyThrows
     private void handleHttpRequest(HttpRequest data, ReadProcessorNode next)
     {
-        String rawMethod = data.getHead() == null ? null : data.getHead().getMethod();
-        String rawPath = data.getHead() == null ? null : data.getHead().getPath();
-        String rawContentType = findHeader(data, "Content-Type");
-        String rawUserAgent = findHeader(data, "User-Agent");
+        String rawMethod        = data.getHead() == null ? null : data.getHead().getMethod();
+        String rawPath          = data.getHead() == null ? null : data.getHead().getPath();
+        String rawContentType   = findHeader(data, "Content-Type");
+        String rawUserAgent     = findHeader(data, "User-Agent");
         long   rawContentLength = data.getHead() == null ? -1 : data.getHead().getContentLength();
-        String path = rawPath == null ? "" : rawPath;
+        String path             = rawPath == null ? "" : rawPath;
         try (HttpRequestExtend requestExtend = HttpRequestExtend.from(data, next.pipeline()))
         {
             path = requestExtend.getPath();
-            String requestMethod = requestExtend.getMethod();
-            PathRequest[] pathRequests = specificRequestMap.get(path);
-            PathRequest   selected     = null;
+            String        requestMethod = requestExtend.getMethod();
+            PathRequest[] pathRequests  = specificRequestMap.get(path);
+            PathRequest   selected      = null;
             if (pathRequests == null)
             {
                 Map<String, Object> paramMap         = requestExtend.getNotNullParamMap();
@@ -155,7 +159,15 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
             }
             else
             {
-                Object value = selected.invoke(requestExtend);
+                Object value;
+                if (requestInterceptor != null)
+                {
+                    value = requestInterceptor.intercept(requestExtend, selected::invoke);
+                }
+                else
+                {
+                    value = selected.invoke(requestExtend);
+                }
                 if (value != null)
                 {
                     next.pipeline().fireWrite(value);

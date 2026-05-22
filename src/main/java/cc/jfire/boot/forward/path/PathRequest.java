@@ -43,9 +43,9 @@ public class PathRequest
 
     public PathRequest(Method method, Object host)
     {
-        this.method      = method;
-        this.host        = host;
-        ws               = method.isAnnotationPresent(Ws.class);
+        this.method = method;
+        this.host   = host;
+        ws          = method.isAnnotationPresent(Ws.class);
         if (ws)
         {
             path          = method.getAnnotation(Ws.class).value();
@@ -59,8 +59,8 @@ public class PathRequest
         {
             Path annotation = AnnotationContext.getAnnotation(Path.class, method);
             httpMethods = annotation.method();
-            allowAll = Arrays.stream(httpMethods).anyMatch(m -> m == HttpMethod.ALL);
-            path = annotation.value();
+            allowAll    = Arrays.stream(httpMethods).anyMatch(m -> m == HttpMethod.ALL);
+            path        = annotation.value();
             if (path.contains("${"))
             {
                 restfulMatch = new RestfulMatch(path);
@@ -159,10 +159,18 @@ public class PathRequest
         return false;
     }
 
-    public Object invoke(HttpRequestExtend requestExtend) throws InvocationTargetException, IllegalAccessException
+    public Object invoke(HttpRequestExtend requestExtend)
     {
-        requestExtend.ensureParamMapReady(hasSimpleTypeParam);
-        return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
+        try
+        {
+            requestExtend.ensureParamMapReady(hasSimpleTypeParam);
+            return method.invoke(host, Arrays.stream(paramValueGenerators).map(gen -> gen.apply(requestExtend)).toArray());
+        }
+        catch (Throwable e)
+        {
+            ReflectUtil.throwException(e);
+            throw new RuntimeException(e);
+        }
     }
 
     /**
