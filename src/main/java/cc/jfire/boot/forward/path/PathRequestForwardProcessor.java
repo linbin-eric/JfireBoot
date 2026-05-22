@@ -162,7 +162,7 @@ public class PathRequestForwardProcessor implements ReadProcessor<Object>
                 Object value;
                 if (requestInterceptor != null)
                 {
-                    value = requestInterceptor.intercept(requestExtend, selected::invoke);
+                    value = requestInterceptor.intercept(requestExtend, selected);
                 }
                 else
                 {
