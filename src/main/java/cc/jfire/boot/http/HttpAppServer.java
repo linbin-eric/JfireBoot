@@ -66,7 +66,8 @@ public class HttpAppServer
                     pipeline.addReadProcessor(processor);
                 }
             }
-            pipeline.addReadProcessor(new PathRequestForwardProcessor(parseResult, param.getContext().getBean(RequestInterceptor.class)));
+            BeanRegisterInfo info = param.getContext().getBeanRegisterInfo(RequestInterceptor.class);
+            pipeline.addReadProcessor(new PathRequestForwardProcessor(parseResult, info == null ? null : (RequestInterceptor) info.get().getBean()));
             if (StringUtil.isNotBlank(webDir))
             {
                 pipeline.addReadProcessor(new NotFoundUrlProcessor(notFoundBarrier));
