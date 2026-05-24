@@ -213,7 +213,7 @@ public class MultipartExpectedBehaviorTest
         return callWithin(500, () -> {
             CapturingPipeline pipeline = new CapturingPipeline();
             CapturingReadNode node = new CapturingReadNode(pipeline);
-            PathRequestForwardProcessor processor = new PathRequestForwardProcessor(Collections.emptyList());
+            PathRequestForwardProcessor processor = new PathRequestForwardProcessor(Collections.emptyList(),null);
             processor.read(request(contentType, body), node);
             Assert.assertNull("非法 multipart 请求不应继续传给后续 404/405 处理", node.forwarded);
             Assert.assertTrue("非法 multipart 请求应写出 HttpResponse，实际：" + pipeline.written, pipeline.written instanceof HttpResponse);
